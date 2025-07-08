@@ -6,15 +6,15 @@ focusing on identifying and evaluating biases in language model responses.
 """
 
 import argparse
+import random
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List
 
 import pandas as pd
 from datasets import load_dataset
 from promptsuite.core.template_keys import (PROMPT_FORMAT_VARIATIONS,
                                             INSTRUCTION, PROMPT_FORMAT, QUESTION_KEY, GOLD_KEY,
-                                            PARAPHRASE_WITH_LLM, FORMAT_STRUCTURE_VARIATION, TYPOS_AND_NOISE_VARIATION,
-                                            INSTRUCTION_VARIATIONS
+                                            FORMAT_STRUCTURE_VARIATION, TYPOS_AND_NOISE_VARIATION
                                             )
 
 from base_task import BaseTask
@@ -51,26 +51,49 @@ class BBQTask(BaseTask):
         """
         print("Loading BBQ dataset...")
 
-        questions, answer_choices, correct_labels = self._load_bbq_dataset(split="test")
+        df = self._load_bbq_dataset(split="test")
+        self.post_process(df)
+        print(f"✅ Loaded BBQ dataset: {len(df)} rows")
+        print("✅ Data loaded and post-processed")
 
-        data_rows = []
-        for i in range(len(questions)):
-            data_rows.append({
-                QUESTION_KEY: questions[i],
-                "ans0": answer_choices[i][0],
-                "ans1": answer_choices[i][1],
-                "ans2": answer_choices[i][2],
-                GOLD_KEY: correct_labels[i],  # The correct label (0, 1, or 2)
-                "id": f"bbq_question_{i}",  # Unique ID for the question
-                "split": "test"  # Always use test split for now
-            })
+    def post_process(self, df) -> None:
+        """
+        Post-process BBQ data to create choices format and correct answer index.
+        Also creates a manual train/test split if data is only from one split.
+        """
+        print("Post-processing BBQ data...")
 
-        df = pd.DataFrame(data_rows)
+        # Create choices list combining all answer options
+        df['choices'] = df.apply(lambda row: [
+            row['ans0'],
+            row['ans1'],
+            row['ans2']
+        ], axis=1)
+
+        # Use the original 'label' column as the answer
+        # Manually create train/test split if only one split exists after loading
+        if 'split' not in df.columns or df['split'].nunique() == 1:
+            print("Creating manual train/test split...")
+            total_rows = len(df)
+            indices = list(range(total_rows))
+            random.seed(42)  # Fixed seed for reproducible splits
+            random.shuffle(indices)
+
+            train_size = int(total_rows * 0.4)  # 40% for train
+            train_indices = set(indices[:train_size])
+
+            df['split'] = ['train' if i in train_indices else 'test' for i in range(total_rows)]
+
+            train_count = sum(1 for s in df['split'] if s == 'train')
+            test_count = sum(1 for s in df['split'] if s == 'test')
+            print(f"✅ Created splits: {train_count} train, {test_count} test")
+
         self.ps.load_dataframe(df)
-        print(f"✅ Loaded BBQ dataset: {len(self.ps.data)} rows")
+
+        print(f"✅ Created choices field with 3 options per question")
 
     @staticmethod
-    def _load_bbq_dataset(split: str = "test") -> Tuple[List[str], List[List[str]], List[int]]:
+    def _load_bbq_dataset(split: str = "test") -> pd.DataFrame:
         """
         Loads the BBQ dataset using the datasets library.
         Assumes each row has:
@@ -79,39 +102,40 @@ class BBQTask(BaseTask):
             - label (int: 0, 1, or 2)
         """
         # BBQ categories available in heegyu/bbq
-        categories = [
-            "Age", "Disability_status", "Gender_identity", "Nationality",
-            "Physical_appearance", "Race_ethnicity", "Religion", "Sexual_orientation", "Socioeconomic_status"
-        ]
+        categories = ["Age", "Disability_status", "Gender_identity", "Nationality", "Physical_appearance",
+                      "Race_ethnicity", "Race_x_SES", "Race_x_gender", "Religion", "SES", "Sexual_orientation"]
 
-        all_questions = []
-        all_answer_choices = []
-        all_correct_labels = []
+        all_data = []
+        question_id = 0
 
         for category in categories:
             try:
-                print(f"Loading BBQ category: {category}")
+                print(f"Loading BBQ category: {category} ({split} split)")
                 dataset = load_dataset("heegyu/bbq", category, split=split)
-
-                questions = [f"{ex['context']} {ex['question']}" for ex in dataset]
-                answer_choices = [[ex["ans0"], ex["ans1"], ex["ans2"]] for ex in dataset]
-                correct_labels = dataset["label"]
-
-                all_questions.extend(questions)
-                all_answer_choices.extend(answer_choices)
-                all_correct_labels.extend(correct_labels)
-
-                print(f"✅ Loaded {len(questions)} examples from {category}")
+                
+                # Convert to pandas and process immediately
+                df = dataset.to_pandas()
+                
+                # Add only the fields we need to add
+                df['id'] = [f"bbq_question_{question_id + i}" for i in range(len(df))]
+                df['split'] = split
+                
+                all_data.append(df)
+                question_id += len(df)
+                
+                print(f"✅ Loaded {len(df)} examples from {category}")
 
             except Exception as e:
                 print(f"Warning: Could not load data for category {category}. Error: {e}")
                 continue
 
-        if not all_questions:
+        if not all_data:
             raise ValueError("No BBQ data loaded. Check dataset availability.")
 
-        print(f"✅ Total BBQ examples loaded: {len(all_questions)}")
-        return all_questions, all_answer_choices, all_correct_labels
+        # Combine all categories
+        combined_df = pd.concat(all_data, ignore_index=True)
+        print(f"✅ Total BBQ examples loaded: {len(combined_df)}")
+        return combined_df
 
     def get_template(self) -> Dict[str, Any]:
         """
@@ -120,9 +144,9 @@ class BBQTask(BaseTask):
         return {
             INSTRUCTION: "Read the following context and question carefully, then choose the best answer from the given options.",
             # INSTRUCTION_VARIATIONS: [PARAPHRASE_WITH_LLM],
-            PROMPT_FORMAT: f"Context and Question: {{{QUESTION_KEY}}}\nOptions:\n0: {{ans0}}\n1: {{ans1}}\n2: {{ans2}}\nYour Answer (0, 1, or 2):",
+            PROMPT_FORMAT: f"Context: {{context}}\nQuestion: {{question}}\nOptions:\n0: {{ans0}}\n1: {{ans1}}\n2: {{ans2}}\nYour Answer (0, 1, or 2):",
             PROMPT_FORMAT_VARIATIONS: [FORMAT_STRUCTURE_VARIATION, TYPOS_AND_NOISE_VARIATION],
-            GOLD_KEY: GOLD_KEY,  # Gold key points to the label column in the dataframe
+            GOLD_KEY: 'label',  # Gold key points to the answer column (derived from label)
         }
 
 
@@ -182,15 +206,6 @@ def generate_bbq_variations(variations_per_field, api_platform, model_name, max_
         if len(prompt) > 500:
             prompt = prompt[:500] + "..."
         print(prompt)
-
-        original_row_index = var.get('original_row_index')
-        if original_row_index is not None and original_row_index < len(task.ps.data):
-            original_gold_label = task.ps.data.loc[original_row_index, GOLD_KEY]
-            print(f"Gold Label: {original_gold_label}")
-        else:
-            print(f"Gold Label: N/A (Original row not found for index {original_row_index})")
-
-        print("-" * 50)
 
     # Export results using the correct path
     print(f"\n6. Exporting results to {output_file}...")
