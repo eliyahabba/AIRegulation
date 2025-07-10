@@ -156,7 +156,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run language model on AIR-Bench harmful prompt variations")
 
     # Setup common arguments
-    default_data_dir = str(Path(__file__).parent.parent / "data" / "airbench")
+    default_data_dir = str(Path(__file__).parent.parent.parent / "data" /"generated_data"/ "airbench")
     runner.setup_common_args(parser, default_data_dir)
 
     # Add AIR-Bench specific arguments

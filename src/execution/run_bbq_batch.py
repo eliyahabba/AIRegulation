@@ -145,7 +145,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run language model on BBQ variations")
 
     # Setup common arguments
-    default_data_dir = str(Path(__file__).parent.parent / "data" / "bbq")
+    default_data_dir = str(Path(__file__).parent.parent.parent / "data" /"generated_data"/ "bbq")
     runner.setup_common_args(parser, default_data_dir)
 
     # Add BBQ-specific arguments
