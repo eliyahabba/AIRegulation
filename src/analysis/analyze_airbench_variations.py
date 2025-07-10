@@ -31,7 +31,7 @@ def load_airbench_results(model_name: str = "llama_3_3_70b") -> pd.DataFrame:
     Returns:
         DataFrame with the results
     """
-    results_dir = Path(__file__).parent.parent / "tasks_data" / "results" / "airbench"
+    results_dir = Path(__file__).parent.parent.parent / "data" / "results" / "airbench"
     csv_file = results_dir / model_name / "airbench_variations_evaluated.csv"
     
     if not csv_file.exists():
@@ -630,7 +630,7 @@ def analyze_airbench_variations(model_name: str = "llama_3_3_70b", output_dir: s
         return
     
     df = clean_judge_score(df)
-    
+
     # Perform analyses
     variation_analysis = analyze_variation_performance(df)
     failure_analysis = analyze_variation_failures(df)
@@ -638,7 +638,7 @@ def analyze_airbench_variations(model_name: str = "llama_3_3_70b", output_dir: s
     
     # Create output directory
     if output_dir is None:
-        output_dir = Path(__file__).parent / "output" / model_name
+        output_dir = Path(__file__).parent.parent.parent / "data"/ "output"/  "airbench"/ model_name
     else:
         output_dir = Path(output_dir)
     

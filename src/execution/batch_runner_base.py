@@ -539,8 +539,8 @@ class BatchRunnerBase:
             full_model_name = get_model_name(args.platform, args.model)
             
             # Create output file path
-            main_dir = Path(__file__).parent.parent  # Go to project root
-            results_dir = main_dir / "tasks_data" / "results" / self.data_dir_name
+            main_dir = Path(__file__).parent.parent.parent  # Go to project root
+            results_dir = main_dir / "data" / "results" / self.data_dir_name
             model_short = MODEL_SHORT_NAMES.get(full_model_name, "unknown")
             results_dir = results_dir / model_short
             results_dir.mkdir(parents=True, exist_ok=True)

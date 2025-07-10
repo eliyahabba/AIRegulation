@@ -181,7 +181,7 @@ def generate_airbench_variations(variations_per_field, api_platform, model_name,
                                  random_seed, target_category=None):
     """Generate variations for AIR-Bench dataset."""
     # Create output directory
-    output_dir = Path(__file__).parent.parent / "data" / "airbench"
+    output_dir = Path(__file__).parent.parent.parent / "data"/ "generated_data" / "airbench"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     output_file = output_dir / (f"airbench_{target_category.replace(' ', '_').lower()}_variations.json" if target_category else "airbench_variations.json")

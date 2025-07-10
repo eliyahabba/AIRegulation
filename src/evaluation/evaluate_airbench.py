@@ -363,8 +363,8 @@ def main():
 
     # Get the current script directory and build relative paths
     script_dir = Path(__file__).parent
-    tasks_data_dir = script_dir.parent / "tasks_data"
-    original_data_dir = script_dir.parent / "data" / "airbench" # Path to original JSON variations
+    tasks_data_dir = script_dir.parent.parent / "data"
+    original_data_dir = script_dir.parent.parent / "generated_data" / "airbench" # Path to original JSON variations
 
     # Build model-specific paths (only if --model is provided or no specific file/dir is given)
     model_results_dir = None

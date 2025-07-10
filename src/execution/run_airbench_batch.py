@@ -253,7 +253,7 @@ def main():
     # Save summary and print final results
     total_duration = time.time() - total_start_time
     model_short = MODEL_SHORT_NAMES.get(args.model, args.model)
-    results_dir = Path(__file__).parent.parent / "tasks_data" / "results" / "airbench"
+    results_dir = Path(__file__).parent.parent.parent / "data" / "results" / "airbench"
     results_dir.mkdir(parents=True, exist_ok=True)
 
     # Print simple summary

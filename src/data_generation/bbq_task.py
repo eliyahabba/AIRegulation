@@ -182,7 +182,7 @@ def generate_bbq_variations(variations_per_field, api_platform, model_name, max_
                             random_seed):
     """Generate variations for BBQ dataset."""
     # Create output directory
-    output_dir = Path(__file__).parent.parent / "data" / "bbq"
+    output_dir = Path(__file__).parent.parent.parent / "data" / "generated_data" / "bbq"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     output_file = output_dir / "bbq_variations.json"
