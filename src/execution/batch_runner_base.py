@@ -15,11 +15,11 @@ from pathlib import Path
 from threading import Lock
 from typing import List, Dict, Any, Optional, Callable
 
-from src.model_client import get_model_response
+from src.model_client import get_model_response, get_batch_model_responses
 from src.constants import (
     LM_DEFAULT_MAX_TOKENS, LM_DEFAULT_PLATFORM, LM_DEFAULT_TEMPERATURE,
     LM_DEFAULT_PARALLEL_WORKERS, LM_DEFAULT_MAX_RETRIES, LM_DEFAULT_RETRY_SLEEP,
-    LM_DEFAULT_BATCH_SIZE,
+    LM_DEFAULT_BATCH_SIZE, LM_DEFAULT_INFERENCE_BATCH_SIZE, LM_DEFAULT_QUANTIZATION,
     PLATFORMS, MODEL_SHORT_NAMES, MODELS
 )
 
@@ -79,12 +79,14 @@ def get_model_response_with_retry(conversation: List[Dict[str, Any]],
                                   platform: str,
                                   temperature: float = LM_DEFAULT_TEMPERATURE,
                                   max_retries: int = LM_DEFAULT_MAX_RETRIES,
-                                  base_sleep_time: int = LM_DEFAULT_RETRY_SLEEP) -> str:
+                                  base_sleep_time: int = LM_DEFAULT_RETRY_SLEEP,
+                                  quantization: Optional[str] = None) -> str:
     """Get model response with retry logic for rate limit errors."""
     for attempt in range(max_retries + 1):
         try:
             return get_model_response(messages=conversation, model_name=model_name,
-                                      max_tokens=max_tokens, platform=platform, temperature=temperature)
+                                      max_tokens=max_tokens, platform=platform, temperature=temperature,
+                                      quantization=quantization)
         except Exception as e:
             if attempt < max_retries and "rate limit" in str(e).lower():
                 sleep_time = base_sleep_time * (attempt + 1)
@@ -202,6 +204,93 @@ def create_result_entry(variation: Dict[str, Any], response: str, model_name: st
     return result
 
 
+def process_variations_batch(variations_batch: List[Dict[str, Any]],
+                            model_name: str,
+                            max_tokens: int,
+                            platform: str,
+                            temperature: float,
+                            max_retries: int,
+                            retry_sleep: int,
+                            batch_start_num: int,
+                            total_variations: int,
+                            metrics_function=None,
+                            quantization: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Process a batch of variations together (more efficient for local models)."""
+    results = []
+    
+    try:
+        # For local models with batch size > 1, use batch processing
+        if platform == "local" and len(variations_batch) > 1:
+            conversations = []
+            for variation in variations_batch:
+                conversation = variation.get('conversation', [])
+                if conversation:
+                    conversations.append(conversation)
+                else:
+                    # If no conversation, add empty result
+                    results.append(None)
+                    continue
+            
+            if conversations:
+                # Get batch responses
+                batch_responses = get_batch_model_responses(
+                    conversations, model_name, max_tokens=max_tokens, 
+                    platform=platform, temperature=temperature,
+                    quantization=quantization
+                )
+                
+                # Process each response
+                response_idx = 0
+                for i, variation in enumerate(variations_batch):
+                    if variation.get('conversation'):
+                        response = batch_responses[response_idx]
+                        response_idx += 1
+                        
+                        # Extract gold answer and check correctness
+                        if metrics_function:
+                            gold_answer_text, is_correct, extra_metrics = metrics_function(variation, response)
+                        else:
+                            gold_answer_text, is_extractable, extra_info = extract_gold_answer_default(variation)
+                            is_correct = None
+                            extra_metrics = extra_info
+                        
+                        # Create result entry
+                        result = create_result_entry(variation, response, model_name, gold_answer_text, is_correct, extra_metrics)
+                        results.append(result)
+                        
+                        print(f"✅ Completed {batch_start_num + i + 1}/{total_variations} (variation {variation.get('variation_count')})")
+                    else:
+                        results.append(None)
+        else:
+            # Fall back to individual processing
+            for i, variation in enumerate(variations_batch):
+                result = process_single_variation(
+                    variation, model_name, max_tokens, platform, temperature,
+                    max_retries, retry_sleep, batch_start_num + i + 1, total_variations, metrics_function,
+                    quantization
+                )
+                results.append(result)
+                
+        return results
+        
+    except Exception as e:
+        print(f"❌ Error processing batch: {e}")
+        # Fall back to individual processing on error
+        for i, variation in enumerate(variations_batch):
+            try:
+                result = process_single_variation(
+                    variation, model_name, max_tokens, platform, temperature,
+                    max_retries, retry_sleep, batch_start_num + i + 1, total_variations, metrics_function,
+                    quantization
+                )
+                results.append(result)
+            except Exception as inner_e:
+                print(f"❌ Error processing variation {batch_start_num + i + 1}: {inner_e}")
+                results.append(None)
+        
+        return results
+
+
 def process_single_variation(variation: Dict[str, Any],
                            model_name: str,
                            max_tokens: int,
@@ -211,7 +300,8 @@ def process_single_variation(variation: Dict[str, Any],
                            retry_sleep: int,
                            variation_num: int,
                            total_variations: int,
-                           metrics_function=None) -> Dict[str, Any]:
+                           metrics_function=None,
+                           quantization: Optional[str] = None) -> Dict[str, Any]:
     """Process a single variation and return the result."""
     try:
         # Get conversation from variation
@@ -225,7 +315,8 @@ def process_single_variation(variation: Dict[str, Any],
         # Run the model with conversation format, max_tokens, platform, and temperature (with retry logic)
         response = get_model_response_with_retry(
             conversation, model_name, max_tokens=max_tokens, platform=platform,
-            temperature=temperature, max_retries=max_retries, base_sleep_time=retry_sleep
+            temperature=temperature, max_retries=max_retries, base_sleep_time=retry_sleep,
+            quantization=quantization
         )
 
         # Extract gold answer and check correctness using custom or default function
@@ -284,10 +375,14 @@ def run_model_on_variations(variations: List[Dict[str, Any]],
                             parallel_workers: int = LM_DEFAULT_PARALLEL_WORKERS,
                             metrics_function=None,
                             runs_per_sample: int = 1,
+                            inference_batch_size: int = LM_DEFAULT_INFERENCE_BATCH_SIZE,
+                            quantization: Optional[str] = None,
                             ) -> None:
     """Run the language model on variations and save results."""
     print(f"🤖 Using model: {model_name}")
     print(f"📦 Batch size: {batch_size}, Resume: {resume}, Workers: {parallel_workers}")
+    if platform == "local" and inference_batch_size > 1:
+        print(f"🚀 Inference batch size: {inference_batch_size} (for local model efficiency)")
 
     # Load existing results if resume mode is enabled
     results = []
@@ -351,7 +446,8 @@ def run_model_on_variations(variations: List[Dict[str, Any]],
                 future = executor.submit(
                     process_single_variation,
                     variation, model_name, max_tokens, platform, temperature,
-                    max_retries, retry_sleep, i, len(variations_to_process), metrics_function
+                    max_retries, retry_sleep, i, len(variations_to_process), metrics_function,
+                    quantization
                 )
                 future_to_variation[future] = i
 
@@ -366,15 +462,23 @@ def run_model_on_variations(variations: List[Dict[str, Any]],
                     print(f"❌ Unexpected error in parallel processing: {e}")
 
     else:
-        # Sequential processing
+        # Sequential processing with inference batching
         print("🔄 Processing variations sequentially...")
         
-        for i, variation in enumerate(variations_to_process, 1):
-            result = process_single_variation(
-                variation, model_name, max_tokens, platform, temperature,
-                max_retries, retry_sleep, i, len(variations_to_process), metrics_function
+        # Group variations into inference batches
+        for i in range(0, len(variations_to_process), inference_batch_size):
+            batch_variations = variations_to_process[i:i + inference_batch_size]
+            
+            # Process the batch
+            batch_results = process_variations_batch(
+                batch_variations, model_name, max_tokens, platform, temperature,
+                max_retries, retry_sleep, i, len(variations_to_process), metrics_function,
+                quantization
             )
-            add_result_and_save(result, i)
+            
+            # Add results and save
+            for j, result in enumerate(batch_results):
+                add_result_and_save(result, i + j + 1)
 
     # Final save
     print(f"💾 Results saved to: {output_file}")
@@ -591,7 +695,9 @@ class BatchRunnerBase:
                 resume=not args.no_resume,
                 parallel_workers=args.parallel_workers,
                 metrics_function=metrics_function,
-                runs_per_sample=runs_per_sample
+                runs_per_sample=runs_per_sample,
+                inference_batch_size=args.inference_batch_size,
+                quantization=args.quantization
             )
             
             return self.create_result_dict(
@@ -641,6 +747,8 @@ class BatchRunnerBase:
                            help="Maximum number of rows to process per item (None = all rows)")
         parser.add_argument("--variations", type=int, default=None,
                            help="Maximum variations per row to process (None = all variations)")
+        parser.add_argument("--quantization", type=str, default=LM_DEFAULT_QUANTIZATION, choices=["8bit", "4bit"],
+                           help="Quantization type for local models (8bit or 4bit)")    
 
         # Retry and batch options
         parser.add_argument("--max_retries", type=int, default=LM_DEFAULT_MAX_RETRIES,
@@ -649,6 +757,8 @@ class BatchRunnerBase:
                             help=f"Base sleep time in seconds for rate limit retries (default: {LM_DEFAULT_RETRY_SLEEP})")
         parser.add_argument("--batch_size", type=int, default=LM_DEFAULT_BATCH_SIZE,
                             help=f"Number of variations to process before saving intermediate results (default: {LM_DEFAULT_BATCH_SIZE})")
+        parser.add_argument("--inference_batch_size", type=int, default=LM_DEFAULT_INFERENCE_BATCH_SIZE,
+                            help=f"Number of variations to process together in one model call (for local models) (default: {LM_DEFAULT_INFERENCE_BATCH_SIZE})")
 
         # Resume options
         parser.add_argument("--no_resume", action="store_true",
@@ -684,6 +794,10 @@ class BatchRunnerBase:
         print(f"Max retries: {args.max_retries}")
         print(f"Retry sleep time: {args.retry_sleep} seconds")
         print(f"Batch size: {args.batch_size}")
+        if args.platform == "local" and args.inference_batch_size > 1:
+            print(f"Inference batch size: {args.inference_batch_size}")
+        if args.quantization:
+            print(f"Quantization: {args.quantization}")
         resume_mode = not args.no_resume
         print(f"Resume mode: {resume_mode}")
         print(f"Parallel workers: {args.parallel_workers} {'(sequential)' if args.parallel_workers == 1 else '(parallel)'}")

@@ -4,7 +4,9 @@ BBQ Task: Bias in QA
 This module provides a class for generating prompt variations for the BBQ (Bias Benchmark for QA) dataset,
 focusing on identifying and evaluating biases in language model responses.
 """
+from dotenv import load_dotenv
 
+load_dotenv()
 import argparse
 import random
 from pathlib import Path
