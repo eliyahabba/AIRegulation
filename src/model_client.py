@@ -15,7 +15,9 @@ import os
 from abc import abstractmethod
 from typing import List, Dict, Optional, Protocol
 
+import torch
 from dotenv import load_dotenv
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from src.constants import GenerationDefaults, MODELS
 from src.exceptions import APIKeyMissingError
@@ -47,20 +49,14 @@ class LocalProvider:
     """Provider for local Hugging Face models."""
 
     def __init__(self, api_key: str = None):
-        try:
-            from transformers import AutoTokenizer, AutoModelForCausalLM
-            import torch
-            self.AutoTokenizer = AutoTokenizer
-            self.AutoModelForCausalLM = AutoModelForCausalLM
-            self.torch = torch
-            self.model = None
-            self.tokenizer = None
-            self.current_model_name = None
-            self.device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
-            print(f"Using device: {self.device}")
-        except ImportError:
-            raise ImportError(
-                "transformers and torch packages are required for local provider. Install with: pip install transformers torch")
+        self.AutoTokenizer = AutoTokenizer
+        self.AutoModelForCausalLM = AutoModelForCausalLM
+        self.torch = torch
+        self.model = None
+        self.tokenizer = None
+        self.current_model_name = None
+        self.device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
+        print(f"Using device: {self.device}")
 
     def _load_model(self, model_name: str):
         """Load model and tokenizer if not already loaded or if model changed."""
@@ -73,7 +69,7 @@ class LocalProvider:
                 device_map="auto" if self.device != "cpu" else None
             )
             self.current_model_name = model_name
-            
+
             # Set pad token if not exists
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -81,28 +77,30 @@ class LocalProvider:
     def get_response(self, messages: List[Dict[str, str]], model_name: str,
                      max_tokens: Optional[int] = None, temperature: float = 0.0) -> str:
         self._load_model(model_name)
-        
+
         # Try to use chat template if available (for chat models like LLaMA-3-chat, Mistral-instruct)
         if hasattr(self.tokenizer, 'chat_template') and self.tokenizer.chat_template is not None:
             try:
                 # Use the proper chat template
                 prompt = self.tokenizer.apply_chat_template(
-                    messages, 
-                    tokenize=False, 
+                    messages,
+                    tokenize=False,
                     add_generation_prompt=True
                 )
                 print(f"Debug: Using chat template.")
             except Exception as e:
-                raise RuntimeError(f"Failed to apply chat template for model {model_name}: {e}. Ensure the model supports chat templating correctly.")
+                raise RuntimeError(
+                    f"Failed to apply chat template for model {model_name}: {e}. Ensure the model supports chat templating correctly.")
         else:
-            raise RuntimeError(f"Model {model_name} does not have a chat template. Please use a chat-tuned model (e.g., LLaMA-3-chat, Mistral-instruct) or a model with a defined chat_template.")
-        
+            raise RuntimeError(
+                f"Model {model_name} does not have a chat template. Please use a chat-tuned model (e.g., LLaMA-3-chat, Mistral-instruct) or a model with a defined chat_template.")
+
         # Tokenize input
         inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=2048)
-        
+
         # Move to appropriate device
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
-        
+
         # Generate response
         with self.torch.no_grad():
             generate_kwargs = {
@@ -110,18 +108,18 @@ class LocalProvider:
                 "pad_token_id": self.tokenizer.eos_token_id,
                 "eos_token_id": self.tokenizer.eos_token_id,
             }
-            
+
             if temperature > 0:
                 generate_kwargs["temperature"] = temperature
                 generate_kwargs["do_sample"] = True
             else:
                 generate_kwargs["do_sample"] = False
-            
+
             outputs = self.model.generate(**inputs, **generate_kwargs)
-        
+
         # Decode response
         full_response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        
+
         # Extract only the new generated part
         if full_response.startswith(prompt):
             response = full_response[len(prompt):].strip()
@@ -129,14 +127,14 @@ class LocalProvider:
             # If the prompt doesn't match exactly (can happen with chat templates), 
             # try to extract the last assistant response
             response = self._extract_assistant_response(full_response, messages)
-        
+
         return response
-    
+
     def _extract_assistant_response(self, full_response: str, original_messages: List[Dict[str, str]]) -> str:
         """Extract the assistant's response from the full generated text."""
         # Try common assistant markers
         assistant_markers = ["Assistant:", "assistant:", "ASSISTANT:", "<|assistant|>", "<|im_start|>assistant"]
-        
+
         for marker in assistant_markers:
             if marker in full_response:
                 parts = full_response.split(marker)
@@ -148,13 +146,13 @@ class LocalProvider:
                     response = response.split("User:")[0].strip()  # Remove any following user input
                     response = response.split("Human:")[0].strip()  # Remove any following human input
                     return response
-        
+
         # If no markers found, try to get the last part of the response
         # This is a fallback for cases where the format is unclear
         lines = full_response.split('\n')
         if lines:
             return lines[-1].strip()
-        
+
         return full_response.strip()
 
 
@@ -368,7 +366,8 @@ def get_model_response(messages: List[Dict[str, str]],
     if platform == "local":
         provider = LocalProvider()
         if require_gpu and provider.device == "cpu":
-            raise RuntimeError(f"GPU required for local model {model_name} but only CPU is available. Set require_gpu=False to allow CPU usage.")
+            raise RuntimeError(
+                f"GPU required for local model {model_name} but only CPU is available. Set require_gpu=False to allow CPU usage.")
         return provider.get_response(messages, resolved_model_name, max_tokens, temperature)
 
     if platform not in PLATFORM_PROVIDERS:
@@ -378,7 +377,8 @@ def get_model_response(messages: List[Dict[str, str]],
     # Get API key (skip for local platform)
     current_api_key = api_key if api_key is not None else os.getenv(PLATFORM_ENV_VARS[platform])
     if not current_api_key and PLATFORM_ENV_VARS[platform] is not None:
-        raise APIKeyMissingError(f"API key for {platform} is missing. Set the {platform.upper().replace(' ', '_')}_API_KEY environment variable.")
+        raise APIKeyMissingError(
+            f"API key for {platform} is missing. Set the {platform.upper().replace(' ', '_')}_API_KEY environment variable.")
 
     # Create provider and get response
     provider_class = PLATFORM_PROVIDERS[platform]
@@ -474,7 +474,7 @@ if __name__ == "__main__":
                 print(f"   Error testing {platform}: {e}")
         else:
             print(f"❌ {platform} is not available (missing dependencies)")
-    
+
     # Test with platform=None (should use local)
     print("\n--- Testing with platform=None (should use local) ---")
     if is_platform_available("local"):
