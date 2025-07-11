@@ -7,6 +7,13 @@
 #SBATCH --mail-type=END,FAIL,TIME_LIMIT
 #SBATCH --killable
 
+# Usage: sbatch ./run_dataset_on_model_3_8b.sh [model_name] [quantization]
+# Examples:
+#   sbatch ./run_dataset_on_model_3_8b.sh                    # Uses llama3_8b with 8bit quantization
+#   sbatch ./run_dataset_on_model_3_8b.sh llama3_1b          # Uses llama3_1b with 8bit quantization
+#   sbatch ./run_dataset_on_model_3_8b.sh llama3_8b 4bit     # Uses llama3_8b with 4bit quantization
+#   sbatch ./run_dataset_on_model_3_8b.sh phi_3_mini none    # Uses phi_3_mini without quantization
+
 # Set Hugging Face cache directory
 export HF_HOME="/cs/snapless/gabis/gabis/shared"
 echo "HF_HOME is set to: $HF_HOME"
@@ -36,24 +43,52 @@ cd $absolute_project_path
 export UNITXT_ALLOW_UNVERIFIED_CODE="True"
 export CUDA_LAUNCH_BLOCKING=1
 
+# Get model name from command line argument
+MODEL_NAME=${1:-llama3_8b}  # Default to llama3_8b if no argument provided
+QUANTIZATION=${2:-8bit}     # Default to 8bit if no argument provided
+
+# Validate model name
+case $MODEL_NAME in
+    llama3_1b|llama3_3b|llama3_8b|phi_3_mini|qwen_1_5b|qwen_7b|mistral_7b|gemma_7b|deepseek_7b|vicuna_7b|falcon_7b|mpt_7b)
+        echo "✅ Using model: $MODEL_NAME"
+        ;;
+    *)
+        echo "❌ Error: Invalid model name '$MODEL_NAME'"
+        echo "Available models: llama3_1b, llama3_3b, llama3_8b, phi_3_mini, qwen_1_5b, qwen_7b, mistral_7b, gemma_7b, deepseek_7b, vicuna_7b, falcon_7b, mpt_7b"
+        exit 1
+        ;;
+esac
+
+# Validate quantization
+case $QUANTIZATION in
+    8bit|4bit|none)
+        echo "✅ Using quantization: $QUANTIZATION"
+        ;;
+    *)
+        echo "❌ Error: Invalid quantization '$QUANTIZATION'"
+        echo "Available quantization: 8bit, 4bit, none"
+        exit 1
+        ;;
+esac
+
 # Run AIR-Bench batch processing
 # Parameters:
 # --platform local: Use local model
-# --model llama3_8b: Use Llama 3.1 8B model
-# --quantization 8bit: Use 8-bit quantization for memory efficiency
+# --model $MODEL_NAME: Use the specified model
+# --quantization $QUANTIZATION: Use specified quantization
 # --parallel_workers 1: Use sequential processing (1 worker)
 # --all: Process all available AIR-Bench categories
-# --max_tokens 1024: Maximum tokens for response
+# --max_tokens 100: Maximum tokens for response
 # --temperature 0.0: Deterministic responses
 # --batch_size 50: Process 50 variations before saving
 # --max_retries 3: Retry failed requests up to 3 times
 # --retry_sleep 60: Wait 60 seconds between retries
 
-echo "Starting AIR-Bench batch processing with Llama 3.1 8B model..."
+echo "Starting AIR-Bench batch processing with model: $MODEL_NAME (quantization: $QUANTIZATION)..."
 python src/execution/run_airbench_batch.py \
     --platform local \
-    --model llama3_8b \
-    --quantization 8bit \
+    --model $MODEL_NAME \
+    --quantization $QUANTIZATION \
     --parallel_workers 1 \
     --all \
     --max_tokens 100 \
