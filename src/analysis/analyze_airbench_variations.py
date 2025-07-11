@@ -14,6 +14,7 @@ import sys
 from typing import Dict, Any, List, Tuple
 import warnings
 from scipy import stats
+from src.constants import get_model_dir_name
 warnings.filterwarnings('ignore')
 
 # Set style for plots
@@ -21,18 +22,20 @@ plt.style.use('default')
 sns.set_palette("husl")
 
 
-def load_airbench_results(model_name: str = "llama_3_3_70b") -> pd.DataFrame:
+def load_airbench_results(model_name: str = "llama_3_3_70b", quantization: str = None) -> pd.DataFrame:
     """
     Load AIR-Bench results from CSV file.
     
     Args:
         model_name: Name of the model directory to analyze
+        quantization: Quantization type ('8bit', '4bit', or None)
         
     Returns:
         DataFrame with the results
     """
     results_dir = Path(__file__).parent.parent.parent / "data" / "results" / "airbench"
-    csv_file = results_dir / model_name / "airbench_variations_evaluated.csv"
+    model_dir_name = get_model_dir_name(model_name, quantization)
+    csv_file = results_dir / model_dir_name / "airbench_variations_evaluated.csv"
     
     if not csv_file.exists():
         print(f"❌ Results file not found: {csv_file}")
@@ -613,19 +616,21 @@ def generate_variation_report(df: pd.DataFrame, variation_analysis: Dict,
     print(f"📄 Variation analysis report saved to: {output_dir / 'variation_analysis_report.md'}")
 
 
-def analyze_airbench_variations(model_name: str = "llama_3_3_70b", output_dir: str = None):
+def analyze_airbench_variations(model_name: str = "llama_3_3_70b", quantization: str = None, output_dir: str = None):
     """
     Perform comprehensive analysis of AIR-Bench results focusing on variation differences.
     
     Args:
         model_name: Name of the model directory to analyze
+        quantization: Quantization type ('8bit', '4bit', or None)
         output_dir: Directory to save analysis outputs
     """
-    print(f"🔄 AIR-Bench Variation Analysis for model: {model_name}")
+    model_dir_name = get_model_dir_name(model_name, quantization)
+    print(f"🔄 AIR-Bench Variation Analysis for model: {model_dir_name}")
     print("=" * 80)
     
     # Load and clean data
-    df = load_airbench_results(model_name)
+    df = load_airbench_results(model_name, quantization)
     if df is None:
         return
     
@@ -638,7 +643,7 @@ def analyze_airbench_variations(model_name: str = "llama_3_3_70b", output_dir: s
     
     # Create output directory
     if output_dir is None:
-        output_dir = Path(__file__).parent.parent.parent / "data"/ "output"/  "airbench"/ model_name
+        output_dir = Path(__file__).parent.parent.parent / "data"/ "output"/  "airbench"/ model_dir_name
     else:
         output_dir = Path(output_dir)
     
@@ -657,12 +662,14 @@ def main():
     parser = argparse.ArgumentParser(description="AIR-Bench variation analysis focusing on differences between prompt variations")
     parser.add_argument("--model", default="llama_3_3_70b", 
                        help="Model name to analyze (default: llama_3_3_70b)")
+    parser.add_argument("--quantization", default=None, choices=["8bit", "4bit", "none"],
+                       help="Quantization type (8bit, 4bit, or none)")
     parser.add_argument("--output", default=None,
                        help="Output directory for analysis results")
     
     args = parser.parse_args()
     
-    analyze_airbench_variations(model_name=args.model, output_dir=args.output)
+    analyze_airbench_variations(model_name=args.model, quantization=args.quantization, output_dir=args.output)
 
 
 if __name__ == "__main__":

@@ -85,6 +85,22 @@ MODEL_SHORT_NAMES = {
     "gpt-4o": "gpt_4o",
 }
 
+
+def get_model_dir_name(model_short: str, quantization: str = None) -> str:
+    """
+    Get directory name for model results, including quantization if specified.
+    
+    Args:
+        model_short: Short model name (e.g., 'llama3_8b')
+        quantization: Quantization type ('8bit', '4bit', or None)
+    
+    Returns:
+        Directory name (e.g., 'llama3_8b_8bit' or 'llama3_8b')
+    """
+    if quantization and quantization != "none":
+        return f"{model_short}_{quantization}"
+    return model_short
+
 # Backward compatibility aliases (deprecated - use specific TASK_ or LM_ prefixed constants)
 DEFAULT_VARIATIONS_PER_FIELD = TASK_DEFAULT_VARIATIONS_PER_FIELD
 DEFAULT_MAX_VARIATIONS_PER_ROW = TASK_DEFAULT_MAX_VARIATIONS_PER_ROW

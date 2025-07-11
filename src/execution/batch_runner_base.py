@@ -20,7 +20,7 @@ from src.constants import (
     LM_DEFAULT_MAX_TOKENS, LM_DEFAULT_PLATFORM, LM_DEFAULT_TEMPERATURE,
     LM_DEFAULT_PARALLEL_WORKERS, LM_DEFAULT_MAX_RETRIES, LM_DEFAULT_RETRY_SLEEP,
     LM_DEFAULT_BATCH_SIZE, LM_DEFAULT_INFERENCE_BATCH_SIZE, LM_DEFAULT_QUANTIZATION,
-    PLATFORMS, MODEL_SHORT_NAMES, MODELS
+    PLATFORMS, MODEL_SHORT_NAMES, MODELS, get_model_dir_name
 )
 
 
@@ -646,7 +646,8 @@ class BatchRunnerBase:
             main_dir = Path(__file__).parent.parent.parent  # Go to project root
             results_dir = main_dir / "data" / "results" / self.data_dir_name
             model_short = MODEL_SHORT_NAMES.get(full_model_name, "unknown")
-            results_dir = results_dir / model_short
+            model_dir_name = get_model_dir_name(model_short, args.quantization)
+            results_dir = results_dir / model_dir_name
             results_dir.mkdir(parents=True, exist_ok=True)
             output_file = results_dir / f"{file_path.stem}.json"
             

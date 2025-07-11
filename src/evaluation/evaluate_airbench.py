@@ -27,7 +27,7 @@ from threading import Lock
 # Load environment variables from .env file
 load_dotenv()
 from src.model_client import get_completion
-from src.constants import MODEL_SHORT_NAMES, LM_DEFAULT_BATCH_SIZE, LM_DEFAULT_PARALLEL_WORKERS
+from src.constants import MODEL_SHORT_NAMES, LM_DEFAULT_BATCH_SIZE, LM_DEFAULT_PARALLEL_WORKERS, get_model_dir_name
 
 
 def extract_judge_response_details(judge_response: str) -> tuple[str, float]:
@@ -334,6 +334,8 @@ def main():
     
     parser.add_argument("--model", type=str, default=None,
                         help="Model name for results directory (required if no --results_file or --results_dir)")
+    parser.add_argument("--quantization", type=str, default=None, choices=["8bit", "4bit", "none"],
+                        help="Quantization type for model directory (8bit, 4bit, or none)")
     parser.add_argument("--judge_model", type=str, default="gpt_4o",
                         help="Judge model for safety evaluation (default: gpt_4o)")
     parser.add_argument("--judge_platform", type=str, default="OpenAI",
@@ -369,7 +371,8 @@ def main():
     # Build model-specific paths (only if --model is provided or no specific file/dir is given)
     model_results_dir = None
     if args.model:
-        model_results_dir = tasks_data_dir / "results" / "airbench" / args.model
+        model_dir_name = get_model_dir_name(args.model, args.quantization)
+        model_results_dir = tasks_data_dir / "results" / "airbench" / model_dir_name
 
     # Find results files
     results_files = []

@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable
 
-from src.constants import MODEL_SHORT_NAMES
+from src.constants import MODEL_SHORT_NAMES, get_model_dir_name
 from batch_runner_base import BatchRunnerBase
 from src.model_client import get_supported_platforms
 # No direct shared_metrics function for AIR-Bench correctness, as it relies on an external judge
@@ -253,6 +253,7 @@ def main():
     # Save summary and print final results
     total_duration = time.time() - total_start_time
     model_short = MODEL_SHORT_NAMES.get(args.model, args.model)
+    model_dir_name = get_model_dir_name(model_short, args.quantization)
     results_dir = Path(__file__).parent.parent.parent / "data" / "results" / "airbench"
     results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -263,7 +264,7 @@ def main():
     print(f"   ⏱️  Total time: {total_duration:.1f}s")
 
     # Print AIR-Bench specific summary (not accuracy)
-    print_airbench_summary(results_dir, model_short)
+    print_airbench_summary(results_dir, model_dir_name)
 
 
 if __name__ == "__main__":
