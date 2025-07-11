@@ -5,6 +5,7 @@
 #SBATCH --gres=gpu:a5000:1
 #SBATCH --mail-user=eliya.habba@mail.huji.ac.il
 #SBATCH --mail-type=END,FAIL,TIME_LIMIT
+#SBATCH --killable
 
 # Set Hugging Face cache directory
 export HF_HOME="/cs/snapless/gabis/gabis/shared"
