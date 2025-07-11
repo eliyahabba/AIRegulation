@@ -748,8 +748,8 @@ class BatchRunnerBase:
                            help="Maximum number of rows to process per item (None = all rows)")
         parser.add_argument("--variations", type=int, default=None,
                            help="Maximum variations per row to process (None = all variations)")
-        parser.add_argument("--quantization", type=str, default=LM_DEFAULT_QUANTIZATION, choices=["8bit", "4bit"],
-                           help="Quantization type for local models (8bit or 4bit)")    
+        parser.add_argument("--quantization", type=str, default=LM_DEFAULT_QUANTIZATION, choices=["8bit", "4bit", "none"],
+                           help="Quantization type for local models (8bit, 4bit, or none)")    
 
         # Retry and batch options
         parser.add_argument("--max_retries", type=int, default=LM_DEFAULT_MAX_RETRIES,
