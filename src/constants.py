@@ -17,7 +17,8 @@ LM_DEFAULT_PARALLEL_WORKERS = 6  # Number of parallel workers for model calls (1
 LM_DEFAULT_MAX_RETRIES = 3  # Maximum number of retries for rate limit errors
 LM_DEFAULT_RETRY_SLEEP = 60  # Base sleep time in seconds for rate limit retries
 LM_DEFAULT_BATCH_SIZE = 50  # Number of variations to process before saving intermediate results
-LM_DEFAULT_REQUIRE_GPU = True  # Whether to require GPU for local models
+LM_DEFAULT_INFERENCE_BATCH_SIZE = 4  # Number of variations to process together in one model call (for local models)
+LM_DEFAULT_QUANTIZATION = None  # Quantization type: None, "8bit", "4bit"
 
 # Platform options
 PLATFORMS = {
@@ -38,12 +39,19 @@ MODELS = {
         "gpt_4o": "gpt-4o",
     },
     "local": {
-        "default": "meta-llama/Llama-2-7b-chat-hf",
-        "llama2_7b": "meta-llama/Llama-2-7b-chat-hf",
-        "mistral_7b": "mistralai/Mistral-7B-Instruct-v0.2",
+        "default": "microsoft/Phi-3-mini-4k-instruct",
+        # Llama models (use quantization for larger models)
+        "llama3_1b": "meta-llama/Llama-3.2-1B-Instruct",  # Small Llama model
+        "llama3_3b": "meta-llama/Llama-3.2-3B-Instruct",  # Medium Llama model
+        "llama3_8b": "meta-llama/Meta-Llama-3.1-8B-Instruct",  # Large Llama model (recommend 8bit quantization)
+        # Microsoft models
+        "phi_3_mini": "microsoft/Phi-3-mini-4k-instruct",  # Small and efficient
+        # Chinese models  
+        "qwen_1_5b": "Qwen/Qwen2-1.5B-Instruct",
         "qwen_7b": "Qwen/Qwen2-7B-Instruct",
+        # Other models
+        "mistral_7b": "mistralai/Mistral-7B-Instruct-v0.2",
         "gemma_7b": "google/gemma-7b-it",
-        "phi_3_5": "microsoft/Phi-3.5-mini-4k-instruct",
         "deepseek_7b": "deepseek-ai/deepseek-coder-7b-instruct",
         "vicuna_7b": "lmsys/vicuna-7b-v1.5",
         "falcon_7b": "tiiuae/falcon-7b-instruct",
@@ -54,23 +62,27 @@ MODELS = {
 # Short model names for file naming
 MODEL_SHORT_NAMES = {
     # TogetherAI models
-    "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free": "llama_3_3_70b_free",
+    "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free": "llama_3_3_70b",
     "meta-llama/Llama-3.3-70B-Instruct-Turbo": "llama_3_3_70b",
-    
-    # OpenAI models
-    "gpt-4o-mini": "gpt_4o_mini",
-    "gpt-4o": "gpt_4o",
-    
-    # Local models
-    "meta-llama/Llama-2-7b-chat-hf": "llama2_7b",
-    "mistralai/Mistral-7B-Instruct-v0.2": "mistral_7b",
+    # Local Llama models
+    "meta-llama/Llama-3.2-1B-Instruct": "llama3_1b",
+    "meta-llama/Llama-3.2-3B-Instruct": "llama3_3b", 
+    "meta-llama/Meta-Llama-3.1-8B-Instruct": "llama3_8b",
+    # Microsoft models
+    "microsoft/Phi-3-mini-4k-instruct": "phi_3_mini",
+    # Chinese models
+    "Qwen/Qwen2-1.5B-Instruct": "qwen_1_5b",
     "Qwen/Qwen2-7B-Instruct": "qwen_7b",
+    # Other models
+    "mistralai/Mistral-7B-Instruct-v0.2": "mistral_7b",
     "google/gemma-7b-it": "gemma_7b",
-    "microsoft/Phi-3.5-mini-4k-instruct": "phi_3_5",
     "deepseek-ai/deepseek-coder-7b-instruct": "deepseek_7b",
     "lmsys/vicuna-7b-v1.5": "vicuna_7b",
     "tiiuae/falcon-7b-instruct": "falcon_7b",
     "mosaicml/mpt-7b-instruct": "mpt_7b",
+    # OpenAI models
+    "gpt-4o-mini": "gpt_4o_mini",
+    "gpt-4o": "gpt_4o",
 }
 
 # Backward compatibility aliases (deprecated - use specific TASK_ or LM_ prefixed constants)
@@ -85,7 +97,6 @@ DEFAULT_PARALLEL_WORKERS = LM_DEFAULT_PARALLEL_WORKERS
 DEFAULT_MAX_RETRIES = LM_DEFAULT_MAX_RETRIES
 DEFAULT_RETRY_SLEEP = LM_DEFAULT_RETRY_SLEEP
 DEFAULT_BATCH_SIZE = LM_DEFAULT_BATCH_SIZE
-DEFAULT_REQUIRE_GPU = LM_DEFAULT_REQUIRE_GPU
 
 
 
