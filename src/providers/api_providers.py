@@ -17,7 +17,7 @@ class TogetherAIProvider:
                 "together package is required for TogetherAI provider. Install with: pip install together")
 
     def get_response(self, messages: List[Dict[str, str]], model_name: str,
-                     max_tokens: Optional[int] = None, temperature: float = 0.0) -> str:
+                     max_tokens: Optional[int] = None, temperature: float = 0.0) -> Dict[str, str]:
         params = {
             "model": model_name,
             "messages": messages,
@@ -27,7 +27,11 @@ class TogetherAIProvider:
             params["max_tokens"] = max_tokens
 
         response = self.client.chat.completions.create(**params)
-        return response.choices[0].message.content
+        content = response.choices[0].message.content
+        return {
+            "full_response": content,
+            "parsed_response": content
+        }
 
 
 class OpenAIProvider:
@@ -41,7 +45,7 @@ class OpenAIProvider:
             raise ImportError("openai package is required for OpenAI provider. Install with: pip install openai")
 
     def get_response(self, messages: List[Dict[str, str]], model_name: str,
-                     max_tokens: Optional[int] = None, temperature: float = 0.0) -> str:
+                     max_tokens: Optional[int] = None, temperature: float = 0.0) -> Dict[str, str]:
         params = {
             "model": model_name,
             "messages": messages,
@@ -51,7 +55,11 @@ class OpenAIProvider:
             params["max_tokens"] = max_tokens
 
         response = self.client.chat.completions.create(**params)
-        return response.choices[0].message.content
+        content = response.choices[0].message.content
+        return {
+            "full_response": content,
+            "parsed_response": content
+        }
 
 
 class AnthropicProvider:
@@ -66,7 +74,7 @@ class AnthropicProvider:
                 "anthropic package is required for Anthropic provider. Install with: pip install anthropic")
 
     def get_response(self, messages: List[Dict[str, str]], model_name: str,
-                     max_tokens: Optional[int] = None, temperature: float = 0.0) -> str:
+                     max_tokens: Optional[int] = None, temperature: float = 0.0) -> Dict[str, str]:
         # Convert OpenAI format to Anthropic format
         system_message = None
         user_messages = []
@@ -88,7 +96,11 @@ class AnthropicProvider:
             kwargs["system"] = system_message
 
         response = self.client.messages.create(**kwargs)
-        return response.content[0].text
+        content = response.content[0].text
+        return {
+            "full_response": content,
+            "parsed_response": content
+        }
 
 
 class GoogleProvider:
@@ -104,7 +116,7 @@ class GoogleProvider:
                 "google-generativeai package is required for Google provider. Install with: pip install google-generativeai")
 
     def get_response(self, messages: List[Dict[str, str]], model_name: str,
-                     max_tokens: Optional[int] = None, temperature: float = 0.0) -> str:
+                     max_tokens: Optional[int] = None, temperature: float = 0.0) -> Dict[str, str]:
         model = self.genai.GenerativeModel(model_name)
 
         # Convert messages to Gemini format
@@ -126,7 +138,11 @@ class GoogleProvider:
             generation_config["max_output_tokens"] = max_tokens
 
         response = model.generate_content(prompt, generation_config=generation_config)
-        return response.text
+        content = response.text
+        return {
+            "full_response": content,
+            "parsed_response": content
+        }
 
 
 class CohereProvider:
@@ -140,7 +156,7 @@ class CohereProvider:
             raise ImportError("cohere package is required for Cohere provider. Install with: pip install cohere")
 
     def get_response(self, messages: List[Dict[str, str]], model_name: str,
-                     max_tokens: Optional[int] = None, temperature: float = 0.0) -> str:
+                     max_tokens: Optional[int] = None, temperature: float = 0.0) -> Dict[str, str]:
         # Convert to Cohere chat format
         chat_history = []
         message = ""
@@ -169,4 +185,8 @@ class CohereProvider:
             kwargs["chat_history"] = chat_history
 
         response = self.client.chat(**kwargs)
-        return response.text 
+        content = response.text
+        return {
+            "full_response": content,
+            "parsed_response": content
+        } 

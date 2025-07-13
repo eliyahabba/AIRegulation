@@ -94,7 +94,7 @@ class LocalProvider:
                     gen_config.top_k = None
 
     def get_response(self, messages: List[Dict[str, str]], model_name: str,
-                     max_tokens: Optional[int] = None, temperature: float = 0.0) -> str:
+                     max_tokens: Optional[int] = None, temperature: float = 0.0) -> Dict[str, str]:
         self._load_model(model_name)
 
         # Try to use chat template if available (for chat models like LLaMA-3-chat, Mistral-instruct)
@@ -139,11 +139,42 @@ class LocalProvider:
         # Decode response
         full_response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-        # Return the full response instead of trying to extract only the new part
+        # Extract both full response and parsed response
+        full_response_clean = full_response.strip()
+        parsed_response = self._extract_assistant_response(full_response_clean, messages)
+        
+        return {
+            "full_response": full_response_clean,
+            "parsed_response": parsed_response
+        }
+
+    def _extract_assistant_response(self, full_response: str, original_messages: List[Dict[str, str]]) -> str:
+        """Extract the assistant's response from the full generated text."""
+        # Try common assistant markers
+        assistant_markers = ["Assistant:", "assistant:", "ASSISTANT:", "<|assistant|>", "<|im_start|>assistant"]
+
+        for marker in assistant_markers:
+            if marker in full_response:
+                parts = full_response.split(marker)
+                if len(parts) > 1:
+                    # Get the last assistant response
+                    response = parts[-1].strip()
+                    # Remove any trailing markers or special tokens
+                    response = response.split("<|")[0].strip()  # Remove any trailing special tokens
+                    response = response.split("User:")[0].strip()  # Remove any following user input
+                    response = response.split("Human:")[0].strip()  # Remove any following human input
+                    return response
+
+        # If no markers found, try to get the last part of the response
+        # This is a fallback for cases where the format is unclear
+        lines = full_response.split('\n')
+        if lines:
+            return lines[-1].strip()
+
         return full_response.strip()
 
     def get_batch_responses(self, batch_messages: List[List[Dict[str, str]]], model_name: str,
-                            max_tokens: Optional[int] = None, temperature: float = 0.0) -> List[str]:
+                            max_tokens: Optional[int] = None, temperature: float = 0.0) -> List[Dict[str, str]]:
         """Get responses for a batch of conversations (more efficient for local models)."""
         if not batch_messages:
             return []
@@ -197,7 +228,13 @@ class LocalProvider:
         for i, output in enumerate(outputs):
             full_response = self.tokenizer.decode(output, skip_special_tokens=True)
 
-            # Return the full response instead of trying to extract only the new part
-            responses.append(full_response.strip())
+            # Extract both full response and parsed response
+            full_response_clean = full_response.strip()
+            parsed_response = self._extract_assistant_response(full_response_clean, batch_messages[i])
+            
+            responses.append({
+                "full_response": full_response_clean,
+                "parsed_response": parsed_response
+            })
 
         return responses 
