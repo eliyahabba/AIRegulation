@@ -165,8 +165,43 @@ class LocalProvider:
                     response = full_response[len(original_prompt):].strip()
                     if response:
                         return response
-        except:
+                
+                # Alternative: try to find the prompt within the full response
+                # This handles cases where there might be slight formatting differences
+                prompt_index = full_response.find(original_prompt)
+                if prompt_index >= 0:
+                    response = full_response[prompt_index + len(original_prompt):].strip()
+                    if response:
+                        return response
+        except Exception as e:
+            # If there's an error with chat template, continue to fallback methods
             pass
+        
+        # Fallback: Try to extract based on common patterns
+        # Look for patterns that indicate where the assistant response starts
+        
+        # Pattern 1: Look for the end of the last user message
+        if original_messages:
+            last_user_content = original_messages[-1].get('content', '')
+            if last_user_content and last_user_content in full_response:
+                # Find the last occurrence of the user's message
+                last_user_index = full_response.rfind(last_user_content)
+                if last_user_index >= 0:
+                    # Extract everything after the user's message
+                    after_user_msg = full_response[last_user_index + len(last_user_content):].strip()
+                    if after_user_msg:
+                        return after_user_msg
+        
+        # Pattern 2: Look for common separator tokens
+        separators = ['<|endoftext|>', '</s>', '<|im_end|>', '<|eot_id|>']
+        for sep in separators:
+            if sep in full_response:
+                # Find the last occurrence of the separator
+                last_sep_index = full_response.rfind(sep)
+                if last_sep_index >= 0:
+                    response = full_response[last_sep_index + len(sep):].strip()
+                    if response and response != full_response.strip():
+                        return response
         
         # If we can't extract cleanly, just return the full response
         # This is safer than trying to guess the format
