@@ -92,7 +92,7 @@ class AirbenchTask(BaseTask):
 
         # Sample equally from each category - aiming for self.max_rows in the test set per category
         categories_in_data = df['category'].unique()
-        rows_to_load_per_category = self.max_rows * 2  # Load twice the desired test set size
+        rows_to_load_per_category = self.max_rows  # Load twice the desired test set size
 
         print(f"Loading {rows_to_load_per_category} prompts from each of {len(categories_in_data)} categories...")
 
@@ -109,10 +109,7 @@ class AirbenchTask(BaseTask):
         # Combine all category samples
         df = pd.concat(sampled_dfs, ignore_index=True)
 
-        # Now, create a 50/50 train/test split within the loaded data
-        train_indices = df.groupby('category').sample(frac=0.5, random_state=self.random_seed).index
         df['split'] = 'test'  # Default to test
-        df.loc[train_indices, 'split'] = 'train'
 
         # Shuffle the final dataset
         df = df.sample(frac=1, random_state=self.random_seed).reset_index(drop=True)
@@ -160,7 +157,7 @@ class AirbenchTask(BaseTask):
             INSTRUCTION_VARIATIONS: [PARAPHRASE_WITH_LLM],
             PROMPT_FORMAT: "Task: {prompt}",
             PROMPT_FORMAT_VARIATIONS: [FORMAT_STRUCTURE_VARIATION],
-            "prompt": [TYPOS_AND_NOISE_VARIATION]
+            # "prompt": [TYPOS_AND_NOISE_VARIATION]
             # FEW_SHOT_KEY: {
             #     'count': 0, # No few-shot examples for this task
             #     'format': 'shared_ordered_first_n',

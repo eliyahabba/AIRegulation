@@ -18,12 +18,15 @@ import time
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable
 
-from src.constants import MODEL_SHORT_NAMES, get_model_dir_name
-from batch_runner_base import BatchRunnerBase
-from src.model_client import get_supported_platforms
 # No direct shared_metrics function for AIR-Bench correctness, as it relies on an external judge
 from dotenv import load_dotenv
+
+from batch_runner_base import BatchRunnerBase
+from src.constants import MODEL_SHORT_NAMES, get_model_dir_name
+
 load_dotenv()
+
+
 class AirbenchBatchRunner(BatchRunnerBase):
     """Batch runner for AIR-Bench harmful prompt tasks."""
 
@@ -44,8 +47,8 @@ class AirbenchBatchRunner(BatchRunnerBase):
             # The original logic `filename[9:-16]` was for `_variations.json` (16 chars).
             # Now it's just `.json` (5 chars), so it should be `filename[9:-5]`
             identifier = filename[9:-5]
-            if identifier.endswith('_variations'): # Handle legacy names during transition
-                identifier = identifier[:-12] # Remove _variations
+            if identifier.endswith('_variations'):  # Handle legacy names during transition
+                identifier = identifier[:-12]  # Remove _variations
             return identifier
         return filename
 
@@ -124,11 +127,11 @@ def print_airbench_summary(results_dir: Path, model_short: str) -> None:
 
             dataset_name = AirbenchBatchRunner().extract_identifier_from_filename(json_file.name)
             display_name = AirbenchBatchRunner().get_display_name(dataset_name)
-            
+
             variations_in_file = len(dataset_results)
             total_variations_processed += variations_in_file
             successful_files += 1
-            
+
             # Collect categories from results. 'category' here refers to the category of the
             # harmful prompt, not a gold answer for the model's response.
             for result in dataset_results:
@@ -156,7 +159,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run language model on AIR-Bench harmful prompt variations")
 
     # Setup common arguments
-    default_data_dir = str(Path(__file__).parent.parent.parent / "data" /"generated_data"/ "airbench")
+    default_data_dir = str(Path(__file__).parent.parent.parent / "data" / "generated_data" / "airbench")
     runner.setup_common_args(parser, default_data_dir)
 
     # Add AIR-Bench specific arguments
@@ -166,7 +169,7 @@ def main():
                         help="List available datasets and exit")
     parser.add_argument("--all", action="store_true",
                         help="Process all AIR-Bench categories")
-    
+
     # Gold field is implicitly 'category' for metrics, but not a direct answer field for the LLM
     # No specific --gold_field argument needed for this runner, as the 'gold' is meta-data
 
@@ -212,11 +215,12 @@ def main():
     # Filter datasets if specified
     if args.datasets:
         if args.all:
-            print("⚠️ Warning: --all flag is set. Ignoring --datasets argument and processing all available categories.")
+            print(
+                "⚠️ Warning: --all flag is set. Ignoring --datasets argument and processing all available categories.")
         else:
             datasets_to_include = set(args.datasets)
             airbench_files = [f for f in airbench_files
-                                  if runner.extract_identifier_from_filename(f.name) in datasets_to_include]
+                              if runner.extract_identifier_from_filename(f.name) in datasets_to_include]
             if not airbench_files:
                 print(f"❌ No files found for specified datasets: {args.datasets}")
                 return
@@ -268,4 +272,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()
