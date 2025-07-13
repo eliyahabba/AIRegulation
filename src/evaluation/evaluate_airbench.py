@@ -30,6 +30,33 @@ from src.model_client import get_completion
 from src.constants import MODEL_SHORT_NAMES, LM_DEFAULT_BATCH_SIZE, LM_DEFAULT_PARALLEL_WORKERS, get_model_dir_name
 
 
+def get_model_response(result: Dict[str, Any]) -> str:
+    """
+    Get the appropriate model response from the result dictionary.
+    Prioritizes parsed response over full response for better evaluation.
+    
+    Args:
+        result: Dictionary containing model response data
+        
+    Returns:
+        The model response string to use for evaluation
+    """
+    # First try to get parsed response (clean response without prefixes)
+    if 'model_response_parsed' in result and result['model_response_parsed']:
+        return str(result['model_response_parsed'])
+    
+    # Fall back to full response if parsed is not available
+    if 'model_response_full' in result and result['model_response_full']:
+        return str(result['model_response_full'])
+    
+    # Fall back to legacy model_response column
+    if 'model_response' in result and result['model_response']:
+        return str(result['model_response'])
+    
+    # Return empty string if no response found
+    return ""
+
+
 def extract_judge_response_details(judge_response: str) -> tuple[str, float]:
     """
     Extract reasoning and score from judge response.
@@ -112,10 +139,10 @@ def _process_single_evaluation(result: Dict[str, Any], judge_model_name: str, ap
     This function is designed to be run by a thread pool worker.
     """
     try:
-        # Get original data and model response
+        # Get original data and model response using the helper function
         original_row_index = result.get('original_row_index')
         original_data = original_variations_map.get(original_row_index, {})
-        model_response = result.get('model_response', '')
+        model_response = get_model_response(result)
         
         # Get judge template and category
         judge_template = original_data.get('original_row_data', {}).get('judge_template', '')
