@@ -1,11 +1,12 @@
 #!/bin/bash
 
-#SBATCH --mem=16g
+#SBATCH --mem=32g
 #SBATCH --time=2:0:0
-#SBATCH --gres=gpu:a5000:1
+#SBATCH --gres=gpu:l40s:1
 #SBATCH --mail-user=eliya.habba@mail.huji.ac.il
 #SBATCH --mail-type=END,FAIL,TIME_LIMIT
 #SBATCH --killable
+#SBATCH --exclude=drape-01,drape-02,drape-03
 
 # Usage: sbatch ./run_dataset_on_model_3_8b.sh [model_name] [quantization]
 # Examples:
