@@ -83,9 +83,18 @@ def get_model_response_with_retry(conversation: List[Dict[str, Any]],
     """Get model response with retry logic for rate limit errors."""
     for attempt in range(max_retries + 1):
         try:
-            return get_model_response(messages=conversation, model_name=model_name,
-                                      max_tokens=max_tokens, platform=platform, temperature=temperature,
-                                      quantization=quantization)
+            response = get_model_response(messages=conversation, model_name=model_name,
+                                          max_tokens=max_tokens, platform=platform, temperature=temperature,
+                                          quantization=quantization)
+            
+            # Ensure we return a string, not a dict
+            if isinstance(response, dict):
+                return response.get("parsed_response", response.get("full_response", ""))
+            elif isinstance(response, str):
+                return response
+            else:
+                return str(response)
+                
         except Exception as e:
             if attempt < max_retries and "rate limit" in str(e).lower():
                 sleep_time = base_sleep_time * (attempt + 1)

@@ -192,7 +192,7 @@ class LocalProvider:
                     if after_user_msg:
                         return after_user_msg
         
-        # Pattern 2: Look for common separator tokens
+        # Pattern 2: Look for common separator tokens and role indicators
         separators = ['<|endoftext|>', '</s>', '<|im_end|>', '<|eot_id|>']
         for sep in separators:
             if sep in full_response:
@@ -200,6 +200,47 @@ class LocalProvider:
                 last_sep_index = full_response.rfind(sep)
                 if last_sep_index >= 0:
                     response = full_response[last_sep_index + len(sep):].strip()
+                    if response and response != full_response.strip():
+                        return response
+        
+        # Pattern 3: Look for role indicators (assistant, user, system)
+        role_patterns = [
+            'assistant\n\n',
+            'assistant\n',
+            'Assistant:\n',
+            'Assistant: ',
+            'ASSISTANT:\n',
+            'ASSISTANT: '
+        ]
+        for pattern in role_patterns:
+            if pattern in full_response:
+                # Find the last occurrence of the pattern
+                last_pattern_index = full_response.rfind(pattern)
+                if last_pattern_index >= 0:
+                    response = full_response[last_pattern_index + len(pattern):].strip()
+                    if response and response != full_response.strip():
+                        return response
+        
+        # Pattern 4: Look for standalone "assistant" at the beginning of a line
+        lines = full_response.split('\n')
+        for i, line in enumerate(lines):
+            if line.strip().lower() == 'assistant':
+                # Extract everything after this line
+                remaining_lines = lines[i+1:]
+                response = '\n'.join(remaining_lines).strip()
+                if response and response != full_response.strip():
+                    return response
+        
+        # Pattern 5: If response starts with "assistant" followed by newlines, remove it
+        if full_response.lower().startswith('assistant'):
+            # Find the first non-empty line after "assistant"
+            lines = full_response.split('\n')
+            for i, line in enumerate(lines):
+                if i == 0 and line.strip().lower() == 'assistant':
+                    continue
+                if line.strip():  # First non-empty line after assistant
+                    remaining_lines = lines[i:]
+                    response = '\n'.join(remaining_lines).strip()
                     if response and response != full_response.strip():
                         return response
         

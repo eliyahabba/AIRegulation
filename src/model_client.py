@@ -96,7 +96,8 @@ def get_batch_model_responses(batch_messages: List[List[Dict[str, str]]],
         resolved_model_name = platform_models[model_name]
 
     provider = _get_local_provider(quantization)
-    return provider.get_batch_responses(batch_messages, resolved_model_name, max_tokens, temperature)
+    responses = provider.get_batch_responses(batch_messages, resolved_model_name, max_tokens, temperature)
+    return [response.get("parsed_response", response.get("full_response", "")) for response in responses]
 
 
 def get_model_response(messages: List[Dict[str, str]],
@@ -120,7 +121,8 @@ def get_model_response(messages: List[Dict[str, str]],
     # Handle local provider (no API key needed)
     if platform == "local":
         provider = _get_local_provider(quantization)
-        return provider.get_response(messages, resolved_model_name, max_tokens, temperature)
+        response = provider.get_response(messages, resolved_model_name, max_tokens, temperature)
+        return response.get("parsed_response", response.get("full_response", ""))
 
     if platform not in PLATFORM_PROVIDERS:
         supported_platforms = list(PLATFORM_PROVIDERS.keys())
@@ -136,7 +138,8 @@ def get_model_response(messages: List[Dict[str, str]],
     provider_class = PLATFORM_PROVIDERS[platform]
     try:
         provider = provider_class(current_api_key)
-        return provider.get_response(messages, resolved_model_name, max_tokens, temperature)
+        response = provider.get_response(messages, resolved_model_name, max_tokens, temperature)
+        return response.get("parsed_response", response.get("full_response", ""))
     except ImportError as e:
         raise ImportError(f"Failed to initialize {platform} provider: {e}")
     except Exception as e:
