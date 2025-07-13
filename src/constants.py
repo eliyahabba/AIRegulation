@@ -17,7 +17,7 @@ LM_DEFAULT_PARALLEL_WORKERS = 6  # Number of parallel workers for model calls (1
 LM_DEFAULT_MAX_RETRIES = 3  # Maximum number of retries for rate limit errors
 LM_DEFAULT_RETRY_SLEEP = 60  # Base sleep time in seconds for rate limit retries
 LM_DEFAULT_BATCH_SIZE = 50  # Number of variations to process before saving intermediate results
-LM_DEFAULT_INFERENCE_BATCH_SIZE = 20  # Number of variations to process together in one model call (for local models)
+LM_DEFAULT_INFERENCE_BATCH_SIZE = 10  # Number of variations to process together in one model call (for local models)
 LM_DEFAULT_QUANTIZATION = None  # Quantization type: None, "8bit", "4bit"
 
 # Platform options
