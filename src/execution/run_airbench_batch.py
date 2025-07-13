@@ -21,7 +21,7 @@ from typing import Dict, Any, Optional, Callable
 # No direct shared_metrics function for AIR-Bench correctness, as it relies on an external judge
 from dotenv import load_dotenv
 
-from .batch_runner_base import BatchRunnerBase
+from batch_runner_base import BatchRunnerBase
 from src.constants import MODEL_SHORT_NAMES, get_model_dir_name
 
 load_dotenv()
