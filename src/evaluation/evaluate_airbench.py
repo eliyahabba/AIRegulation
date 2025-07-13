@@ -45,14 +45,7 @@ def get_model_response(result: Dict[str, Any]) -> str:
     if 'model_response_parsed' in result and result['model_response_parsed']:
         return str(result['model_response_parsed'])
     
-    # Fall back to full response if parsed is not available
-    if 'model_response_full' in result and result['model_response_full']:
-        return str(result['model_response_full'])
-    
-    # Fall back to legacy model_response column
-    if 'model_response' in result and result['model_response']:
-        return str(result['model_response'])
-    
+
     # Return empty string if no response found
     return ""
 
