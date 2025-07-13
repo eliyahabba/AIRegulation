@@ -150,27 +150,26 @@ class LocalProvider:
 
     def _extract_assistant_response(self, full_response: str, original_messages: List[Dict[str, str]]) -> str:
         """Extract the assistant's response from the full generated text."""
-        # Try common assistant markers
-        assistant_markers = ["Assistant:", "assistant:", "ASSISTANT:", "<|assistant|>", "<|im_start|>assistant"]
-
-        for marker in assistant_markers:
-            if marker in full_response:
-                parts = full_response.split(marker)
-                if len(parts) > 1:
-                    # Get the last assistant response
-                    response = parts[-1].strip()
-                    # Remove any trailing markers or special tokens
-                    response = response.split("<|")[0].strip()  # Remove any trailing special tokens
-                    response = response.split("User:")[0].strip()  # Remove any following user input
-                    response = response.split("Human:")[0].strip()  # Remove any following human input
-                    return response
-
-        # If no markers found, try to get the last part of the response
-        # This is a fallback for cases where the format is unclear
-        lines = full_response.split('\n')
-        if lines:
-            return lines[-1].strip()
-
+        
+        # First, try to reconstruct the original prompt to see what was the input
+        try:
+            if hasattr(self.tokenizer, 'chat_template') and self.tokenizer.chat_template is not None:
+                original_prompt = self.tokenizer.apply_chat_template(
+                    original_messages,
+                    tokenize=False,
+                    add_generation_prompt=True
+                )
+                
+                # If the full response starts with the original prompt, extract what comes after
+                if full_response.startswith(original_prompt):
+                    response = full_response[len(original_prompt):].strip()
+                    if response:
+                        return response
+        except:
+            pass
+        
+        # If we can't extract cleanly, just return the full response
+        # This is safer than trying to guess the format
         return full_response.strip()
 
     def get_batch_responses(self, batch_messages: List[List[Dict[str, str]]], model_name: str,
