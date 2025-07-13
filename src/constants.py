@@ -17,7 +17,7 @@ LM_DEFAULT_PARALLEL_WORKERS = 6  # Number of parallel workers for model calls (1
 LM_DEFAULT_MAX_RETRIES = 3  # Maximum number of retries for rate limit errors
 LM_DEFAULT_RETRY_SLEEP = 60  # Base sleep time in seconds for rate limit retries
 LM_DEFAULT_BATCH_SIZE = 50  # Number of variations to process before saving intermediate results
-LM_DEFAULT_INFERENCE_BATCH_SIZE = 4  # Number of variations to process together in one model call (for local models)
+LM_DEFAULT_INFERENCE_BATCH_SIZE = 20  # Number of variations to process together in one model call (for local models)
 LM_DEFAULT_QUANTIZATION = None  # Quantization type: None, "8bit", "4bit"
 
 # Platform options
@@ -51,6 +51,7 @@ MODELS = {
         "qwen_7b": "Qwen/Qwen2-7B-Instruct",
         # Other models
         "mistral_7b": "mistralai/Mistral-7B-Instruct-v0.2",
+        "mistral_8b": "mistralai/Ministral-8B-Instruct-2410",
         "gemma_7b": "google/gemma-7b-it",
         "deepseek_7b": "deepseek-ai/deepseek-coder-7b-instruct",
         "vicuna_7b": "lmsys/vicuna-7b-v1.5",
@@ -75,6 +76,7 @@ MODEL_SHORT_NAMES = {
     "Qwen/Qwen2-7B-Instruct": "qwen_7b",
     # Other models
     "mistralai/Mistral-7B-Instruct-v0.2": "mistral_7b",
+    "mistralai/Ministral-8B-Instruct-2410": "mistral_8b",
     "google/gemma-7b-it": "gemma_7b",
     "deepseek-ai/deepseek-coder-7b-instruct": "deepseek_7b",
     "lmsys/vicuna-7b-v1.5": "vicuna_7b",

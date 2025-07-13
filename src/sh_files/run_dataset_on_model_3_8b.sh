@@ -49,12 +49,12 @@ QUANTIZATION=${2:-8bit}     # Default to 8bit if no argument provided
 
 # Validate model name
 case $MODEL_NAME in
-    llama3_1b|llama3_3b|llama3_8b|phi_3_mini|qwen_1_5b|qwen_7b|mistral_7b|gemma_7b|deepseek_7b|vicuna_7b|falcon_7b|mpt_7b)
+    llama3_1b|llama3_3b|llama3_8b|phi_3_mini|qwen_1_5b|qwen_7b|mistral_7b|mistral_8b|gemma_7b|deepseek_7b|vicuna_7b|falcon_7b|mpt_7b)
         echo "✅ Using model: $MODEL_NAME"
         ;;
     *)
         echo "❌ Error: Invalid model name '$MODEL_NAME'"
-        echo "Available models: llama3_1b, llama3_3b, llama3_8b, phi_3_mini, qwen_1_5b, qwen_7b, mistral_7b, gemma_7b, deepseek_7b, vicuna_7b, falcon_7b, mpt_7b"
+        echo "Available models: llama3_1b, llama3_3b, llama3_8b, phi_3_mini, qwen_1_5b, qwen_7b, mistral_7b, mistral_8b, gemma_7b, deepseek_7b, vicuna_7b, falcon_7b, mpt_7b"
         exit 1
         ;;
 esac
