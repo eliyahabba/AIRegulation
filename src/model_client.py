@@ -29,6 +29,22 @@ from src.providers import (
 # Load environment variables from .env file
 load_dotenv()
 
+# Global LocalProvider instance to avoid reloading models
+_local_provider_instance = None
+
+
+def _get_local_provider(quantization: Optional[str] = None) -> 'LocalProvider':
+    """Get or create the global LocalProvider instance."""
+    global _local_provider_instance
+    
+    # If we don't have an instance yet, or quantization settings changed, create a new one
+    if (_local_provider_instance is None or 
+        _local_provider_instance.quantization != quantization):
+        _local_provider_instance = LocalProvider(api_key=None, quantization=quantization)
+    
+    return _local_provider_instance
+
+
 # Platform registry
 PLATFORM_PROVIDERS = {
     "TogetherAI": TogetherAIProvider,
@@ -79,7 +95,7 @@ def get_batch_model_responses(batch_messages: List[List[Dict[str, str]]],
             raise ValueError(f"Unsupported model '{model_name}' for platform '{platform}'")
         resolved_model_name = platform_models[model_name]
 
-    provider = LocalProvider(api_key, quantization)
+    provider = _get_local_provider(quantization)
     return provider.get_batch_responses(batch_messages, resolved_model_name, max_tokens, temperature)
 
 
@@ -103,8 +119,8 @@ def get_model_response(messages: List[Dict[str, str]],
 
     # Handle local provider (no API key needed)
     if platform == "local":
-        return LocalProvider(api_key=None, quantization=quantization).get_response(messages, resolved_model_name,
-                                                                                   max_tokens, temperature)
+        provider = _get_local_provider(quantization)
+        return provider.get_response(messages, resolved_model_name, max_tokens, temperature)
 
     if platform not in PLATFORM_PROVIDERS:
         supported_platforms = list(PLATFORM_PROVIDERS.keys())
