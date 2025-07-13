@@ -30,7 +30,6 @@ def load_variations_file(file_path: str) -> List[Dict[str, Any]]:
     if not os.path.exists(file_path):
         print(f"❌ File not found: {file_path}")
         return []
-
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             variations = json.load(f)
@@ -103,13 +102,9 @@ def get_model_name(platform: str, model_key: str) -> str:
     """Get the full model name based on platform and model key."""
     if platform not in MODELS:
         raise ValueError(f"Unsupported platform: {platform}. Supported platforms: {list(MODELS.keys())}")
-
-    platform_models = MODELS[platform]
-    if model_key not in platform_models:
-        raise ValueError(
-            f"Unsupported model '{model_key}' for platform '{platform}'. Available models: {list(platform_models.keys())}")
-
-    return platform_models[model_key]
+    if model_key not in MODELS[platform]:
+        raise ValueError(f"Unsupported model '{model_key}' for platform '{platform}'. Available models: {list(MODELS[platform].keys())}")
+    return MODELS[platform][model_key]
 
 
 def extract_gold_answer_with_field(variation: Dict[str, Any], gold_field: str) -> tuple[str, bool, Dict[str, Any]]:
@@ -159,20 +154,13 @@ def extract_gold_answer_with_field(variation: Dict[str, Any], gold_field: str) -
 
 
 def extract_gold_answer_default(variation: Dict[str, Any]) -> tuple[str, bool, Dict[str, Any]]:
-    """
-    Extract gold answer using default logic (try common field names).
-    
-    Returns:
-        tuple: (gold_answer_text, is_extractable, extra_info)
-    """
+    """Extract gold answer using default logic (try common field names)."""
     gold_updates = variation.get('gold_updates', {})
     if not gold_updates:
         return "N/A", False, {}
     
-    # Try common field names in order of preference
-    common_fields = ['label', 'answer', 'gold_answer', 'correct_answer']
-    
-    for field in common_fields:
+    # Try common field names, fallback to first available field
+    for field in ['label', 'answer', 'gold_answer', 'correct_answer']:
         if field in gold_updates:
             return extract_gold_answer_with_field(variation, field)
     
@@ -224,43 +212,30 @@ def process_variations_batch(variations_batch: List[Dict[str, Any]],
             conversations = []
             for variation in variations_batch:
                 conversation = variation.get('conversation', [])
-                if conversation:
-                    conversations.append(conversation)
-                else:
-                    # If no conversation, add empty result
-                    results.append(None)
-                    continue
+                conversations.append(conversation)
             
-            if conversations:
-                # Get batch responses
-                batch_responses = get_batch_model_responses(
-                    conversations, model_name, max_tokens=max_tokens, 
-                    platform=platform, temperature=temperature,
-                    quantization=quantization
-                )
+            # Get batch responses
+            batch_responses = get_batch_model_responses(
+                conversations, model_name, max_tokens=max_tokens, 
+                platform=platform, temperature=temperature,
+                quantization=quantization
+            )
+            
+            # Process each response
+            for i, (variation, response) in enumerate(zip(variations_batch, batch_responses)):
+                # Extract gold answer and check correctness
+                if metrics_function:
+                    gold_answer_text, is_correct, extra_metrics = metrics_function(variation, response)
+                else:
+                    gold_answer_text, is_extractable, extra_info = extract_gold_answer_default(variation)
+                    is_correct = None
+                    extra_metrics = extra_info
                 
-                # Process each response
-                response_idx = 0
-                for i, variation in enumerate(variations_batch):
-                    if variation.get('conversation'):
-                        response = batch_responses[response_idx]
-                        response_idx += 1
-                        
-                        # Extract gold answer and check correctness
-                        if metrics_function:
-                            gold_answer_text, is_correct, extra_metrics = metrics_function(variation, response)
-                        else:
-                            gold_answer_text, is_extractable, extra_info = extract_gold_answer_default(variation)
-                            is_correct = None
-                            extra_metrics = extra_info
-                        
-                        # Create result entry
-                        result = create_result_entry(variation, response, model_name, gold_answer_text, is_correct, extra_metrics)
-                        results.append(result)
-                        
-                        print(f"✅ Completed {batch_start_num + i + 1}/{total_variations} (variation {variation.get('variation_count')})")
-                    else:
-                        results.append(None)
+                # Create result entry
+                result = create_result_entry(variation, response, model_name, gold_answer_text, is_correct, extra_metrics)
+                results.append(result)
+                
+                print(f"✅ Completed {batch_start_num + i + 1}/{total_variations} (variation {variation.get('variation_count')})")
         else:
             # Fall back to individual processing
             for i, variation in enumerate(variations_batch):
@@ -306,10 +281,7 @@ def process_single_variation(variation: Dict[str, Any],
     try:
         # Get conversation from variation
         conversation = variation.get('conversation', [])
-        if not conversation:
-            print(f"⚠️  Skipping variation {variation_num}: No conversation found")
-            return None
-
+        
         print(f"🔄 Processing {variation_num}/{total_variations} (variation {variation.get('variation_count')})")
 
         # Run the model with conversation format, max_tokens, platform, and temperature (with retry logic)
@@ -354,11 +326,10 @@ def get_processed_variation_indices(results: List[Dict[str, Any]]) -> set:
     """Get set of (original_row_index, variation_index, run_number) tuples that have already been processed."""
     processed = set()
     for result in results:
-        if 'variation_index' in result:
-            row_idx = result.get('original_row_index', 0)
-            var_idx = result['variation_index']
-            run_num = result.get('run_number', 1)  # Default to 1 for backward compatibility
-            processed.add((row_idx, var_idx, run_num))
+        row_idx = result['original_row_index']
+        var_idx = result['variation_index']
+        run_num = result['run_number']
+        processed.add((row_idx, var_idx, run_num))
     return processed
 
 
@@ -517,13 +488,10 @@ def load_existing_results(output_file: str) -> List[Dict[str, Any]]:
 
 
 def save_batch_results(results: List[Dict[str, Any]], output_file: str) -> None:
-    """Save results to JSON file."""
+    """Save results to JSON and CSV files."""
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
-
-    # Also save CSV
-    csv_file = str(output_file).replace('.json', '.csv')
-    save_results_as_csv(results, csv_file)
+    save_results_as_csv(results, str(output_file).replace('.json', '.csv'))
 
 
 def save_results_as_csv(results: List[Dict[str, Any]], csv_file: str) -> None:
