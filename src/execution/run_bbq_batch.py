@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable
 
-from batch_runner_base import BatchRunnerBase
+from .batch_runner_base import BatchRunnerBase
 from src.constants import MODEL_SHORT_NAMES, get_model_dir_name
 from src.model_client import get_supported_platforms
 

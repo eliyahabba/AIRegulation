@@ -79,21 +79,26 @@ def get_model_response_with_retry(conversation: List[Dict[str, Any]],
                                   temperature: float = LM_DEFAULT_TEMPERATURE,
                                   max_retries: int = LM_DEFAULT_MAX_RETRIES,
                                   base_sleep_time: int = LM_DEFAULT_RETRY_SLEEP,
-                                  quantization: Optional[str] = None) -> str:
-    """Get model response with retry logic for rate limit errors."""
+                                  quantization: Optional[str] = None) -> Dict[str, str]:
+    """Get model response with retry logic for rate limit errors. Returns dict with full_response and parsed_response."""
     for attempt in range(max_retries + 1):
         try:
             response = get_model_response(messages=conversation, model_name=model_name,
                                           max_tokens=max_tokens, platform=platform, temperature=temperature,
                                           quantization=quantization)
             
-            # Ensure we return a string, not a dict
+            # Ensure we return a dict with both responses
             if isinstance(response, dict):
-                return response.get("parsed_response", response.get("full_response", ""))
-            elif isinstance(response, str):
-                return response
+                return {
+                    "full_response": response.get("full_response", ""),
+                    "parsed_response": response.get("parsed_response", response.get("full_response", ""))
+                }
             else:
-                return str(response)
+                str_response = str(response)
+                return {
+                    "full_response": str_response,
+                    "parsed_response": str_response
+                }
                 
         except Exception as e:
             if attempt < max_retries and "rate limit" in str(e).lower():
@@ -178,7 +183,7 @@ def extract_gold_answer_default(variation: Dict[str, Any]) -> tuple[str, bool, D
     return extract_gold_answer_with_field(variation, first_field)
 
 
-def create_result_entry(variation: Dict[str, Any], response: str, model_name: str, 
+def create_result_entry(variation: Dict[str, Any], response: Dict[str, str], model_name: str, 
                        gold_answer_text: str, is_correct: bool, extra_metrics: Dict[str, Any]) -> Dict[str, Any]:
     """Create a result entry dictionary."""
     result = {
@@ -186,7 +191,9 @@ def create_result_entry(variation: Dict[str, Any], response: str, model_name: st
         'original_row_index': variation.get('original_row_index', 'Unknown'),
         'run_number': variation.get('run_number', 1),
         'unique_run_id': variation.get('unique_run_id', f"{variation.get('original_row_index', 0)}_{variation.get('variation_count', 0)}_1"),
-        'model_response': response,
+        'model_response_full': response.get('full_response', ''),
+        'model_response_parsed': response.get('parsed_response', ''),
+        'model_response': response.get('parsed_response', ''),  # Keep for backward compatibility
         'model_name': model_name,
         'gold_answer': gold_answer_text,
         'is_correct': is_correct,
@@ -302,7 +309,8 @@ def process_single_variation(variation: Dict[str, Any],
 
         # Extract gold answer and check correctness using custom or default function
         if metrics_function:
-            gold_answer_text, is_correct, extra_metrics = metrics_function(variation, response)
+            # For metrics function, pass the parsed response as string
+            gold_answer_text, is_correct, extra_metrics = metrics_function(variation, response.get('parsed_response', ''))
         else:
             # Extract gold answer using improved logic
             gold_answer_text, is_extractable, extra_info = extract_gold_answer_default(variation)
@@ -509,7 +517,7 @@ def save_results_as_csv(results: List[Dict[str, Any]], csv_file: str) -> None:
         return
     
     # Define base columns
-    base_columns = ['variation_index', 'original_row_index', 'run_number', 'unique_run_id', 'model_name', 'model_response', 'gold_answer', 'is_correct']
+    base_columns = ['variation_index', 'original_row_index', 'run_number', 'unique_run_id', 'model_name', 'model_response_full', 'model_response_parsed', 'model_response', 'gold_answer', 'is_correct']
     
     # Add metric columns if they exist in any result
     metric_columns = ['bleu', 'rouge1', 'rouge2', 'rougeL', 'sacrebleu', 'predicted_score', 'mse', 'mae', 'absolute_error', 'parsed_answer', 'gold_numeric_answer']
