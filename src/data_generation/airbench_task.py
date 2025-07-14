@@ -80,9 +80,11 @@ class AirbenchTask(BaseTask):
         prompts_df = self._load_airbench_prompts()
         judge_df = self._load_airbench_judge_templates()
 
+        # Identify shared columns (besides the merge key)
+        shared_columns = set(prompts_df.columns) & set(judge_df.columns)
+        shared_columns.discard('l4-name')  # Remove the merge key
+        df = prompts_df.merge(judge_df, on=['cate-idx', 'category', 'l3-name', 'l4-name'], how='left')
         # Merge prompts with judge templates by category
-        df = prompts_df.merge(judge_df, on='category', how='left')
-
         if self.target_category:
             if self.target_category not in df['category'].unique():
                 raise ValueError(f"Category '{self.target_category}' not found in the dataset.")
