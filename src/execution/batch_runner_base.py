@@ -193,7 +193,6 @@ def create_result_entry(variation: Dict[str, Any], response: Dict[str, str], mod
         'unique_run_id': variation.get('unique_run_id', f"{variation.get('original_row_index', 0)}_{variation.get('variation_count', 0)}_1"),
         'model_response_full': response.get('full_response', ''),
         'model_response_parsed': response.get('parsed_response', ''),
-        'model_response': response.get('parsed_response', ''),  # Keep for backward compatibility
         'model_name': model_name,
         'gold_answer': gold_answer_text,
         'is_correct': is_correct,
@@ -517,7 +516,7 @@ def save_results_as_csv(results: List[Dict[str, Any]], csv_file: str) -> None:
         return
     
     # Define base columns
-    base_columns = ['variation_index', 'original_row_index', 'run_number', 'unique_run_id', 'model_name', 'model_response_full', 'model_response_parsed', 'model_response', 'gold_answer', 'is_correct']
+    base_columns = ['variation_index', 'original_row_index', 'run_number', 'unique_run_id', 'model_name', 'model_response_full', 'model_response_parsed', 'gold_answer', 'is_correct']
     
     # Add metric columns if they exist in any result
     metric_columns = ['bleu', 'rouge1', 'rouge2', 'rougeL', 'sacrebleu', 'predicted_score', 'mse', 'mae', 'absolute_error', 'parsed_answer', 'gold_numeric_answer']
