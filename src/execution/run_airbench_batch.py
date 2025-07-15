@@ -10,6 +10,7 @@ Example usage:
 python run_airbench_batch.py --batch_size 5 --max_retries 5
 python run_airbench_batch.py --model llama_3_3_70b --max_tokens 512
 python run_airbench_batch.py --no_resume  # Start fresh
+python run_airbench_batch.py --variant airbench_with_typos  # Process typos variant
 """
 
 import argparse
@@ -29,10 +30,20 @@ load_dotenv()
 class AirbenchBatchRunner(BatchRunnerBase):
     """Batch runner for AIR-Bench harmful prompt tasks."""
 
-    def __init__(self):
+    def __init__(self, variant: str = "airbench"):
+        """
+        Initialize the batch runner.
+        
+        Args:
+            variant: Either "airbench" or "airbench_with_typos"
+        """
+        if variant not in ["airbench", "airbench_with_typos"]:
+            raise ValueError(f"Invalid variant: {variant}. Must be 'airbench' or 'airbench_with_typos'")
+        
+        self.variant = variant
         super().__init__(
-            task_name="AIR-Bench Harmful Prompts",
-            data_dir_name="airbench",
+            task_name=f"AIR-Bench Harmful Prompts ({variant})",
+            data_dir_name=variant,
             file_pattern="airbench_*.json"
         )
 
@@ -54,8 +65,8 @@ class AirbenchBatchRunner(BatchRunnerBase):
     def get_display_name(self, identifier: str) -> str:
         """Convert identifier to display name."""
         if identifier == "harmful_prompts":
-            return "AIR-Bench Harmful Prompts"
-        return identifier.replace("_", " ").title()
+            return f"AIR-Bench Harmful Prompts ({self.variant})"
+        return f"{identifier.replace('_', ' ').title()} ({self.variant})"
 
     def get_metrics_function(self) -> Optional[Callable]:
         """
@@ -80,6 +91,7 @@ class AirbenchBatchRunner(BatchRunnerBase):
         """
         result = {
             "dataset": identifier,
+            "variant": self.variant,
             "status": status,
             "duration": duration
         }
@@ -94,7 +106,7 @@ class AirbenchBatchRunner(BatchRunnerBase):
         return result
 
 
-def print_airbench_summary(results_dir: Path, model_short: str) -> None:
+def print_airbench_summary(results_dir: Path, model_short: str, variant: str = "airbench") -> None:
     """
     Print a summary of AIR-Bench results.
     This summary focuses on completion status rather than specific metrics, as evaluation
@@ -102,12 +114,12 @@ def print_airbench_summary(results_dir: Path, model_short: str) -> None:
     """
     model_dir = results_dir / model_short
     if not model_dir.exists():
-        print("📊 No AIR-Bench data available")
+        print(f"📊 No AIR-Bench ({variant}) data available")
         return
 
     json_files = list(model_dir.glob("*.json"))
     if not json_files:
-        print("📊 No AIR-Bench data available")
+        print(f"📊 No AIR-Bench ({variant}) data available")
         return
 
     total_files = len(json_files)
@@ -115,7 +127,7 @@ def print_airbench_summary(results_dir: Path, model_short: str) -> None:
     successful_files = 0
     categories_encountered = set()
 
-    print(f"\n📊 AIR-Bench Results Summary for model: {model_short}")
+    print(f"\n📊 AIR-Bench ({variant}) Results Summary for model: {model_short}")
     print(f"   Total processed files: {total_files}")
     print("=" * 60)
 
@@ -124,8 +136,8 @@ def print_airbench_summary(results_dir: Path, model_short: str) -> None:
             with open(json_file, 'r', encoding='utf-8') as f:
                 dataset_results = json.load(f)
 
-            dataset_name = AirbenchBatchRunner().extract_identifier_from_filename(json_file.name)
-            display_name = AirbenchBatchRunner().get_display_name(dataset_name)
+            dataset_name = AirbenchBatchRunner(variant).extract_identifier_from_filename(json_file.name)
+            display_name = AirbenchBatchRunner(variant).get_display_name(dataset_name)
 
             variations_in_file = len(dataset_results)
             total_variations_processed += variations_in_file
@@ -153,15 +165,11 @@ def print_airbench_summary(results_dir: Path, model_short: str) -> None:
 
 def main():
     """Main function to run language model on all AIR-Bench files."""
-    runner = AirbenchBatchRunner()
-
     parser = argparse.ArgumentParser(description="Run language model on AIR-Bench harmful prompt variations")
 
-    # Setup common arguments
-    default_data_dir = str(Path(__file__).parent.parent.parent / "data" / "generated_data" / "airbench")
-    runner.setup_common_args(parser, default_data_dir)
-
-    # Add AIR-Bench specific arguments
+    # Add AIR-Bench specific arguments first
+    parser.add_argument("--variant", choices=["airbench", "airbench_with_typos"], default="airbench",
+                        help="Specify the variant of AIR-Bench to process (e.g., --variant airbench_with_typos)")
     parser.add_argument("--datasets", nargs="+",
                         help="Run only specific datasets (e.g., --datasets harmful_prompts)")
     parser.add_argument("--list_datasets", action="store_true",
@@ -169,28 +177,39 @@ def main():
     parser.add_argument("--all", action="store_true",
                         help="Process all AIR-Bench categories")
 
+    # Parse args to get variant first
+    args, remaining = parser.parse_known_args()
+    
+    # Create runner with the selected variant
+    runner = AirbenchBatchRunner(args.variant)
+
+    # Setup common arguments with the correct default data directory
+    default_data_dir = str(Path(__file__).parent.parent.parent / "data" / "generated_data" / args.variant)
+    runner.setup_common_args(parser, default_data_dir)
+
     # Gold field is implicitly 'category' for metrics, but not a direct answer field for the LLM
     # No specific --gold_field argument needed for this runner, as the 'gold' is meta-data
 
+    # Parse all arguments now
     args = parser.parse_args()
 
     # Handle list datasets option
     if args.list_datasets:
-        airbench_dir = Path(args.airbench_dir).resolve()
+        airbench_dir = Path(getattr(args, f"{args.variant}_dir")).resolve()
         if not airbench_dir.exists():
-            print(f"❌ AIR-Bench directory not found: {airbench_dir}")
+            print(f"❌ AIR-Bench ({args.variant}) directory not found: {airbench_dir}")
             return
 
         airbench_files = runner.find_variation_files(airbench_dir)
         if not airbench_files:
-            print(f"❌ No AIR-Bench variation files found in: {airbench_dir}")
+            print(f"❌ No AIR-Bench ({args.variant}) variation files found in: {airbench_dir}")
             print("   Expected files matching pattern: airbench_*.json")
             return
 
         datasets = [runner.extract_identifier_from_filename(f.name) for f in airbench_files]
         datasets.sort()
 
-        print(f"📚 Available AIR-Bench datasets ({len(datasets)}):")
+        print(f"📚 Available AIR-Bench ({args.variant}) datasets ({len(datasets)}):")
         for i, dataset in enumerate(datasets, 1):
             display_name = runner.get_display_name(dataset)
             print(f"   {i:2d}. {display_name} ({dataset})")
@@ -201,14 +220,14 @@ def main():
     print(f"🤖 Using model: {full_model_name} on {args.platform}")
 
     # Find and filter AIR-Bench files
-    airbench_dir = Path(args.airbench_dir).resolve()
+    airbench_dir = Path(getattr(args, f"{args.variant}_dir")).resolve()
     if not airbench_dir.exists():
-        print(f"❌ AIR-Bench directory not found: {airbench_dir}")
+        print(f"❌ AIR-Bench ({args.variant}) directory not found: {airbench_dir}")
         return
 
     airbench_files = runner.find_variation_files(airbench_dir)
     if not airbench_files:
-        print(f"❌ No AIR-Bench variation files found in: {airbench_dir}")
+        print(f"❌ No AIR-Bench ({args.variant}) variation files found in: {airbench_dir}")
         return
 
     # Filter datasets if specified
@@ -257,17 +276,17 @@ def main():
     total_duration = time.time() - total_start_time
     model_short = MODEL_SHORT_NAMES.get(args.model, args.model)
     model_dir_name = get_model_dir_name(model_short, args.quantization)
-    results_dir = Path(__file__).parent.parent.parent / "data" / "results" / "airbench"
+    results_dir = Path(__file__).parent.parent.parent / "data" / "results" / args.variant
     results_dir.mkdir(parents=True, exist_ok=True)
 
     # Print simple summary
     successful = len([r for r in results if r["status"] == "success"])
-    print(f"\n🎉 AIR-Bench Processing Completed!")
+    print(f"\n🎉 AIR-Bench ({args.variant}) Processing Completed!")
     print(f"   ✅ Successful: {successful}/{len(results)}")
     print(f"   ⏱️  Total time: {total_duration:.1f}s")
 
     # Print AIR-Bench specific summary (not accuracy)
-    print_airbench_summary(results_dir, model_dir_name)
+    print_airbench_summary(results_dir, model_dir_name, args.variant)
 
 
 if __name__ == "__main__":
