@@ -75,13 +75,16 @@ MODEL_SHORT_NAMES = {
     "meta-llama/Meta-Llama-3.1-8B-Instruct": "llama3_8b",
     # Microsoft models
     "microsoft/Phi-3-mini-4k-instruct": "phi_3_mini",
+    "microsoft/Phi-4-mini-instruct": "phi_4_mini",
     # Chinese models
     "Qwen/Qwen2-1.5B-Instruct": "qwen_1_5b",
     "Qwen/Qwen2-7B-Instruct": "qwen_7b",
+    "Qwen/Qwen3-8B-Instruct": "qwen3_8b",
     # Other models
     "mistralai/Mistral-7B-Instruct-v0.2": "mistral_7b",
     "mistralai/Ministral-8B-Instruct-2410": "mistral_8b",
     "google/gemma-7b-it": "gemma_7b",
+    "google/gemma-2-9b": "gemma_2_9b",
     "deepseek-ai/deepseek-coder-7b-instruct": "deepseek_7b",
     "lmsys/vicuna-7b-v1.5": "vicuna_7b",
     "tiiuae/falcon-7b-instruct": "falcon_7b",
