@@ -46,17 +46,21 @@ MODELS = {
         "llama3_8b": "meta-llama/Meta-Llama-3.1-8B-Instruct",  # Large Llama model (recommend 8bit quantization)
         # Microsoft models
         "phi_3_mini": "microsoft/Phi-3-mini-4k-instruct",  # Small and efficient
+        "phi_4_mini": "microsoft/Phi-4-mini-instruct",  # Latest Phi model
         # Chinese models  
         "qwen_1_5b": "Qwen/Qwen2-1.5B-Instruct",
         "qwen_7b": "Qwen/Qwen2-7B-Instruct",
+        "qwen3_8b": "Qwen/Qwen3-8B-Instruct",  # Large Qwen model (recommend 8bit quantization)
         # Other models
         "mistral_7b": "mistralai/Mistral-7B-Instruct-v0.2",
         "mistral_8b": "mistralai/Ministral-8B-Instruct-2410",
         "gemma_7b": "google/gemma-7b-it",
+        "gemma_2_9b": "google/gemma-2-9b",
         "deepseek_7b": "deepseek-ai/deepseek-coder-7b-instruct",
         "vicuna_7b": "lmsys/vicuna-7b-v1.5",
         "falcon_7b": "tiiuae/falcon-7b-instruct",
         "mpt_7b": "mosaicml/mpt-7b-instruct",
+
     }
 }
 
