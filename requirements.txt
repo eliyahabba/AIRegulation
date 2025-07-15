@@ -1,0 +1,17 @@
+# Core dependencies
+python-dotenv
+
+# API providers
+together
+openai
+anthropic
+google-generativeai
+cohere
+
+# Local model support
+transformers
+torch
+
+# Data processing
+pandas
+numpy 
