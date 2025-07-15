@@ -50,7 +50,7 @@ MODELS = {
         # Chinese models  
         "qwen_1_5b": "Qwen/Qwen2-1.5B-Instruct",
         "qwen_7b": "Qwen/Qwen2-7B-Instruct",
-        "qwen3_8b": "Qwen/Qwen3-8B-Instruct",  # Large Qwen model (recommend 8bit quantization)
+        "qwen3_8b": "Qwen/Qwen3-8B",  # Large Qwen model (recommend 8bit quantization)
         # Other models
         "mistral_7b": "mistralai/Mistral-7B-Instruct-v0.2",
         "mistral_8b": "mistralai/Ministral-8B-Instruct-2410",
@@ -79,7 +79,7 @@ MODEL_SHORT_NAMES = {
     # Chinese models
     "Qwen/Qwen2-1.5B-Instruct": "qwen_1_5b",
     "Qwen/Qwen2-7B-Instruct": "qwen_7b",
-    "Qwen/Qwen3-8B-Instruct": "qwen3_8b",
+    "Qwen/Qwen3-8B": "qwen3_8b",
     # Other models
     "mistralai/Mistral-7B-Instruct-v0.2": "mistral_7b",
     "mistralai/Ministral-8B-Instruct-2410": "mistral_8b",
