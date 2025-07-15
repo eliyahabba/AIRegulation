@@ -567,9 +567,6 @@ def main():
     # Create separate box plots for each dataset
     create_dataset_boxplots(all_model_results, output_dir)
     
-    # Generate report
-    generate_variation_report(all_model_results, output_dir)
-    
     print(f"\n✅ Unified variation analysis complete!")
     print(f"📁 Results saved to: {output_dir}")
     print("=" * 60)
