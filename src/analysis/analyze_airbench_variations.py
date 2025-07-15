@@ -336,7 +336,7 @@ def analyze_category_variation_interaction(df: pd.DataFrame) -> Dict[str, Any]:
 
 
 def create_variation_focused_visualizations(df: pd.DataFrame, variation_analysis: Dict, 
-                                          failure_analysis: Dict, category_variation_analysis: Dict, output_dir: Path):
+                                          failure_analysis: Dict, category_variation_analysis: Dict, output_dir: Path, model_dir_name: str):
     """
     Create visualizations focused on variation differences.
     
@@ -346,6 +346,7 @@ def create_variation_focused_visualizations(df: pd.DataFrame, variation_analysis
         failure_analysis: Results from failure analysis
         category_variation_analysis: Results from category-variation analysis
         output_dir: Directory to save plots
+        model_dir_name: Name of the model directory
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     
@@ -489,131 +490,10 @@ def create_variation_focused_visualizations(df: pd.DataFrame, variation_analysis
                         ha='center', va='top', fontsize=7, color='gray', clip_on=False)
     
     plt.tight_layout()
-    plt.savefig(output_dir / 'variation_analysis.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / f'{model_dir_name}_variation_analysis.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f"📊 Enhanced variation visualizations saved to: {output_dir / 'variation_analysis.png'}")
-
-
-def generate_variation_report(df: pd.DataFrame, variation_analysis: Dict, 
-                            failure_analysis: Dict, category_variation_analysis: Dict, output_dir: Path):
-    """
-    Generate a comprehensive report focused on variation differences.
-    
-    Args:
-        df: DataFrame with results
-        variation_analysis: Results from variation analysis
-        failure_analysis: Results from failure analysis
-        category_variation_analysis: Results from category-variation analysis
-        output_dir: Directory to save report
-    """
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    report = []
-    report.append("# AIR-Bench Variation Analysis Report")
-    report.append("")
-    report.append(f"**Model:** llama_3_3_70b")
-    report.append(f"**Total Responses:** {len(df)}")
-    report.append(f"**Valid Scores:** {len(df['judge_score_clean'].dropna())}")
-    report.append("")
-    
-    # Overall variation performance
-    if 'variation_stats' in variation_analysis:
-        variation_stats = variation_analysis['variation_stats']
-        report.append("## Success Rate Analysis (Score 1.0)")
-        report.append("")
-        report.append(f"- **Total Variations:** {len(variation_stats)}")
-        report.append(f"- **Best Variation:** {variation_analysis['best_variation']['variation_index']} ({variation_analysis['best_variation']['success_rate']:.1f}% success)")
-        report.append(f"- **Worst Variation:** {variation_analysis['worst_variation']['variation_index']} ({variation_analysis['worst_variation']['success_rate']:.1f}% success)")
-        report.append(f"- **Overall Performance Spread:** {variation_analysis['best_variation']['success_rate'] - variation_analysis['worst_variation']['success_rate']:.1f}%")
-        report.append(f"- **Average Success Rate:** {variation_stats['success_rate'].mean():.1f}%")
-        report.append(f"- **Success Rate Std Dev:** {variation_stats['success_rate'].std():.1f}%")
-        report.append("")
-        
-        # Top 5 variations table
-        report.append("### Top 5 Variations by Success Rate")
-        report.append("")
-        report.append("| Variation | Success Rate | Avg Score | Count |")
-        report.append("|-----------|--------------|-----------|-------|")
-        for _, row in variation_analysis['top_5'].iterrows():
-            report.append(f"| {row['variation_index']} | {row['success_rate']:.1f}% | {row['mean_score']:.3f} | {row['count']} |")
-        report.append("")
-        
-        # Bottom 5 variations table
-        report.append("### Bottom 5 Variations by Success Rate")
-        report.append("")
-        report.append("| Variation | Success Rate | Avg Score | Count |")
-        report.append("|-----------|--------------|-----------|-------|")
-        for _, row in variation_analysis['bottom_5'].iterrows():
-            report.append(f"| {row['variation_index']} | {row['success_rate']:.1f}% | {row['mean_score']:.3f} | {row['count']} |")
-        report.append("")
-    
-    # Failure analysis
-    if failure_analysis and 'variation_stats' in failure_analysis:
-        failure_stats = failure_analysis['variation_stats']
-        report.append("## Failure Rate Analysis (Score 0.0)")
-        report.append("")
-        report.append(f"- **Worst Variation (Most Failures):** {failure_analysis['worst_variation']['variation_index']} ({failure_analysis['worst_variation']['failure_rate']:.1f}% failures)")
-        report.append(f"- **Best Variation (Least Failures):** {failure_analysis['best_variation']['variation_index']} ({failure_analysis['best_variation']['failure_rate']:.1f}% failures)")
-        report.append(f"- **Failure Rate Spread:** {failure_analysis['worst_variation']['failure_rate'] - failure_analysis['best_variation']['failure_rate']:.1f}%")
-        report.append(f"- **Average Failure Rate:** {failure_stats['failure_rate'].mean():.1f}%")
-        report.append(f"- **Failure Rate Std Dev:** {failure_stats['failure_rate'].std():.1f}%")
-        report.append("")
-        
-        # Top 5 failures table
-        report.append("### Top 5 Variations by Failure Rate")
-        report.append("")
-        report.append("| Variation | Failure Rate | Avg Score | Count |")
-        report.append("|-----------|--------------|-----------|-------|")
-        for _, row in failure_analysis['top_5_failures'].iterrows():
-            report.append(f"| {row['variation_index']} | {row['failure_rate']:.1f}% | {row['mean_score']:.3f} | {row['count']} |")
-        report.append("")
-        
-        # Bottom 5 failures table
-        report.append("### Bottom 5 Variations by Failure Rate")
-        report.append("")
-        report.append("| Variation | Failure Rate | Avg Score | Count |")
-        report.append("|-----------|--------------|-----------|-------|")
-        for _, row in failure_analysis['bottom_5_failures'].iterrows():
-            report.append(f"| {row['variation_index']} | {row['failure_rate']:.1f}% | {row['mean_score']:.3f} | {row['count']} |")
-        report.append("")
-    
-    # Category-variation insights
-    report.append("## Category-Variation Performance Spreads")
-    report.append("")
-    report.append("| Category | Best Variation | Worst Variation | Spread |")
-    report.append("|----------|----------------|-----------------|--------|")
-    
-    for category, stats in category_variation_analysis['category_variation_stats'].items():
-        if stats['best_variation'] and stats['worst_variation']:
-            report.append(f"| {category} | {stats['best_variation'][0]} ({stats['best_variation'][1]['success_rate']:.1f}%) | {stats['worst_variation'][0]} ({stats['worst_variation'][1]['success_rate']:.1f}%) | {stats['performance_spread']:.1f}% |")
-    report.append("")
-    
-    # Key insights
-    report.append("## Key Insights")
-    report.append("")
-    
-    if variation_analysis and failure_analysis:
-        best_success_var = variation_analysis['best_variation']['variation_index']
-        worst_success_var = variation_analysis['worst_variation']['variation_index']
-        worst_failure_var = failure_analysis['worst_variation']['variation_index']
-        best_failure_var = failure_analysis['best_variation']['variation_index']
-        
-        report.append(f"- **Best Success Variation:** {best_success_var} achieves the highest success rate ({variation_analysis['best_variation']['success_rate']:.1f}%)")
-        report.append(f"- **Worst Success Variation:** {worst_success_var} has the lowest success rate ({variation_analysis['worst_variation']['success_rate']:.1f}%)")
-        report.append(f"- **Most Failure-Prone Variation:** {worst_failure_var} has the highest failure rate ({failure_analysis['worst_variation']['failure_rate']:.1f}%)")
-        report.append(f"- **Least Failure-Prone Variation:** {best_failure_var} has the lowest failure rate ({failure_analysis['best_variation']['failure_rate']:.1f}%)")
-        
-        # Find categories with highest variation impact
-        max_spread_category = max(category_variation_analysis['category_variation_stats'].items(), 
-                                 key=lambda x: x[1]['performance_spread'])
-        report.append(f"- **Category Most Affected by Variations:** {max_spread_category[0]} with a {max_spread_category[1]['performance_spread']:.1f}% spread")
-    
-    # Save report
-    with open(output_dir / 'variation_analysis_report.md', 'w', encoding='utf-8') as f:
-        f.write('\n'.join(report))
-    
-    print(f"📄 Variation analysis report saved to: {output_dir / 'variation_analysis_report.md'}")
+    print(f"📊 Enhanced variation visualizations saved to: {output_dir / f'{model_dir_name}_variation_analysis.png'}")
 
 
 def analyze_airbench_variations(model_name: str = "llama_3_3_70b", quantization: str = None, output_dir: str = None):
@@ -643,25 +523,74 @@ def analyze_airbench_variations(model_name: str = "llama_3_3_70b", quantization:
     
     # Create output directory
     if output_dir is None:
-        output_dir = Path(__file__).parent.parent.parent / "data"/ "output"/  "airbench"/ model_dir_name
+        output_dir = Path(__file__).parent.parent.parent / "data"/ "output"/  "airbench"
     else:
         output_dir = Path(output_dir)
     
     # Create visualizations
-    create_variation_focused_visualizations(df, variation_analysis, failure_analysis, category_variation_analysis, output_dir)
-    
-    # Generate report
-    generate_variation_report(df, variation_analysis, failure_analysis, category_variation_analysis, output_dir)
+    create_variation_focused_visualizations(df, variation_analysis, failure_analysis, category_variation_analysis, output_dir, model_dir_name)
     
     print(f"\n✅ Variation analysis complete! Results saved to: {output_dir}")
+    print("=" * 80)
+
+
+def analyze_airbench_variations_batch(model_names: List[str] = None, quantization: str = None, output_dir: str = None):
+    """
+    Perform comprehensive analysis of AIR-Bench results for multiple models.
+    
+    Args:
+        model_names: List of model names to analyze (default: ['llama_3_3_70b', 'llama3_8b', 'mistral_8b'])
+        quantization: Quantization type ('8bit', '4bit', or None)
+        output_dir: Directory to save analysis outputs
+    """
+    if model_names is None:
+        model_names = ['llama_3_3_70b', 'llama3_8b', 'mistral_8b']
+    
+    print(f"🚀 Starting batch analysis for {len(model_names)} models: {', '.join(model_names)}")
+    print("=" * 80)
+    
+    # Create output directory
+    if output_dir is None:
+        output_dir = Path(__file__).parent.parent.parent / "data"/ "output"/  "airbench"
+    else:
+        output_dir = Path(output_dir)
+    
+    successful_models = []
+    failed_models = []
+    
+    for i, model_name in enumerate(model_names, 1):
+        print(f"\n📊 Processing model {i}/{len(model_names)}: {model_name}")
+        print("-" * 60)
+        
+        try:
+            analyze_airbench_variations(model_name, quantization, output_dir)
+            successful_models.append(model_name)
+        except Exception as e:
+            print(f"❌ Error processing model {model_name}: {e}")
+            failed_models.append(model_name)
+    
+    # Summary
+    print(f"\n🎯 Batch Analysis Summary:")
+    print("=" * 80)
+    print(f"✅ Successfully processed: {len(successful_models)} models")
+    if successful_models:
+        print(f"   - {', '.join(successful_models)}")
+    
+    print(f"❌ Failed to process: {len(failed_models)} models")
+    if failed_models:
+        print(f"   - {', '.join(failed_models)}")
+    
+    print(f"📁 All results saved to: {output_dir}")
     print("=" * 80)
 
 
 def main():
     """Main function with command line argument parsing."""
     parser = argparse.ArgumentParser(description="AIR-Bench variation analysis focusing on differences between prompt variations")
-    parser.add_argument("--model", default="llama_3_3_70b", 
-                       help="Model name to analyze (default: llama_3_3_70b)")
+    parser.add_argument("--model", default=None, 
+                       help="Model name to analyze (default: runs batch analysis on ['llama_3_3_70b', 'llama3_8b', 'mistral_8b'])")
+    parser.add_argument("--models", nargs='+', default=None,
+                       help="List of model names to analyze in batch")
     parser.add_argument("--quantization", default=None, choices=["8bit", "4bit", "none"],
                        help="Quantization type (8bit, 4bit, or none)")
     parser.add_argument("--output", default=None,
@@ -669,7 +598,13 @@ def main():
     
     args = parser.parse_args()
     
-    analyze_airbench_variations(model_name=args.model, quantization=args.quantization, output_dir=args.output)
+    # If specific model is provided, run single model analysis
+    if args.model:
+        analyze_airbench_variations(model_name=args.model, quantization=args.quantization, output_dir=args.output)
+    else:
+        # Run batch analysis
+        model_list = args.models if args.models else ['llama_3_3_70b', 'llama3_8b', 'mistral_8b']
+        analyze_airbench_variations_batch(model_names=model_list, quantization=args.quantization, output_dir=args.output)
 
 
 if __name__ == "__main__":
