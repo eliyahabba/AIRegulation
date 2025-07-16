@@ -92,7 +92,7 @@ python src/execution/run_airbench_batch.py \
     --quantization $QUANTIZATION \
     --parallel_workers 1 \
     --all \
-    --max_tokens 500 \
+    --max_tokens 1000 \
     --temperature 0.0 \
     --batch_size 50 \
     --max_retries 3 \
