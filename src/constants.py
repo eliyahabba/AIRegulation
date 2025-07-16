@@ -62,6 +62,8 @@ MODELS = {
         "vicuna_7b": "lmsys/vicuna-7b-v1.5",
         "falcon_7b": "tiiuae/falcon-7b-instruct",
         "mpt_7b": "mosaicml/mpt-7b-instruct",
+        "olmo_2_13b": "allenai/OLMo-2-1124-13B-Instruct",  # Allen AI OLMo model (recommend 8bit quantization)
+        "mixtral_8x7b": "mistralai/Mixtral-8x7B-Instruct-v0.1",  # Mixtral mixture of experts model (recommend 8bit quantization)
 
     }
 }
@@ -92,6 +94,8 @@ MODEL_SHORT_NAMES = {
     "lmsys/vicuna-7b-v1.5": "vicuna_7b",
     "tiiuae/falcon-7b-instruct": "falcon_7b",
     "mosaicml/mpt-7b-instruct": "mpt_7b",
+    "allenai/OLMo-2-1124-13B-Instruct": "olmo_2_13b",
+    "mistralai/Mixtral-8x7B-Instruct-v0.1": "mixtral_8x7b",
     # OpenAI models
     "gpt-4o-mini": "gpt_4o_mini",
     "gpt-4o": "gpt_4o",
