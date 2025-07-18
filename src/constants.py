@@ -64,6 +64,10 @@ MODELS = {
         "mpt_7b": "mosaicml/mpt-7b-instruct",
         "olmo_2_13b": "allenai/OLMo-2-1124-13B-Instruct",  # Allen AI OLMo model (recommend 8bit quantization)
         "mixtral_8x7b": "mistralai/Mixtral-8x7B-Instruct-v0.1",  # Mixtral mixture of experts model (recommend 8bit quantization)
+        "dbrx_instruct": "databricks/dbrx-instruct",  # Databricks DBRX model (recommend 8bit quantization)
+        "yi_34b": "01-ai/Yi-34B-Chat",  # Yi 34B chat model (recommend 8bit quantization)
+        "aya_expanse_8b": "CohereLabs/aya-expanse-8b",  # Cohere Aya Expanse model (recommend 8bit quantization)
+        "command_r7b": "CohereLabs/c4ai-command-r7b-12-2024",  # Cohere Command R7B model (recommend 8bit quantization)
 
     }
 }
@@ -96,6 +100,10 @@ MODEL_SHORT_NAMES = {
     "mosaicml/mpt-7b-instruct": "mpt_7b",
     "allenai/OLMo-2-1124-13B-Instruct": "olmo_2_13b",
     "mistralai/Mixtral-8x7B-Instruct-v0.1": "mixtral_8x7b",
+    "databricks/dbrx-instruct": "dbrx_instruct",
+    "01-ai/Yi-34B-Chat": "yi_34b",
+    "CohereLabs/aya-expanse-8b": "aya_expanse_8b",
+    "CohereLabs/c4ai-command-r7b-12-2024": "command_r7b",
     # OpenAI models
     "gpt-4o-mini": "gpt_4o_mini",
     "gpt-4o": "gpt_4o",
