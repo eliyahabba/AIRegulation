@@ -49,12 +49,12 @@ QUANTIZATION=${2:-8bit}     # Default to 8bit if no argument provided
 
 # Validate model name
 case $MODEL_NAME in
-    llama3_1b|llama3_3b|llama3_8b|phi_3_mini|phi_4_mini|qwen_1_5b|qwen_7b|qwen3_8b|mistral_7b|mistral_8b|gemma_7b|gemma_2_9b|gemma_3_12b|deepseek_7b|vicuna_7b|falcon_7b|mpt_7b|olmo_2_13b|mixtral_8x7b|dbrx_instruct|yi_34b|aya_expanse_8b|command_r7b)
+    llama3_1b|llama3_3b|llama3_8b|phi_3_mini|phi_4_mini|qwen_1_5b|qwen_7b|qwen3_8b|mistral_7b|mistral_8b|gemma_7b|gemma_2_9b|gemma_3_12b|deepseek_7b|vicuna_7b|falcon_7b|mpt_7b|olmo_2_13b|mixtral_8x7b|dolly_v2_7b|yi_34b|aya_expanse_8b|command_r7b)
         echo "✅ Using model: $MODEL_NAME"
         ;;
     *)
         echo "❌ Error: Invalid model name '$MODEL_NAME'"
-        echo "Available models: llama3_1b, llama3_3b, llama3_8b, phi_3_mini, phi_4_mini, qwen_1_5b, qwen_7b, qwen3_8b, mistral_7b, mistral_8b, gemma_7b, gemma_2_9b, gemma_3_12b, deepseek_7b, vicuna_7b, falcon_7b, mpt_7b, olmo_2_13b, mixtral_8x7b, dbrx_instruct, yi_34b, aya_expanse_8b, command_r7b"
+        echo "Available models: llama3_1b, llama3_3b, llama3_8b, phi_3_mini, phi_4_mini, qwen_1_5b, qwen_7b, qwen3_8b, mistral_7b, mistral_8b, gemma_7b, gemma_2_9b, gemma_3_12b, deepseek_7b, vicuna_7b, falcon_7b, mpt_7b, olmo_2_13b, mixtral_8x7b, dolly_v2_7b, yi_34b, aya_expanse_8b, command_r7b"
         exit 1
         ;;
 esac

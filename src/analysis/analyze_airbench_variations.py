@@ -544,7 +544,7 @@ def analyze_airbench_variations_batch(model_names: List[str] = None, quantizatio
         output_dir: Directory to save analysis outputs
     """
     if model_names is None:
-        model_names = ['llama_3_3_70b', 'llama3_8b', 'mistral_8b']
+        model_names = ['llama_3_3_70b', 'llama3_8b', 'mistral_8b', 'mixtral_8x7b', 'phi_4_mini', 'olmo_2_13b', 'qwen3_8b']
     
     print(f"🚀 Starting batch analysis for {len(model_names)} models: {', '.join(model_names)}")
     print("=" * 80)
@@ -603,7 +603,7 @@ def main():
         analyze_airbench_variations(model_name=args.model, quantization=args.quantization, output_dir=args.output)
     else:
         # Run batch analysis
-        model_list = args.models if args.models else ['llama_3_3_70b', 'llama3_8b', 'mistral_8b']
+        model_list = args.models if args.models else ['llama_3_3_70b', 'llama3_8b', 'mistral_8b', 'mixtral_8x7b', 'phi_4_mini', 'olmo_2_13b', 'qwen3_8b']
         analyze_airbench_variations_batch(model_names=model_list, quantization=args.quantization, output_dir=args.output)
 
 
