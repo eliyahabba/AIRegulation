@@ -1,4 +1,7 @@
-### AIRegulation: Multi‑Prompt Safety Evaluation on AIR‑Bench
+### Beyond Benchmarks: On The False Promise of AI Regulation
+
+## Overview
+[![Paper](https://img.shields.io/badge/arxiv-paper-red)](https://arxiv.org/abs/2501.15693) [![Contact](https://img.shields.io/badge/📧-contact-green)](mailto:eliyahaba@mail.huji.ac.il)
 
 Evaluate LLM safety under prompt variation. This repository generates controlled prompt variations (using PromptSuite), runs multiple models, judges safety with GPT‑4o‑mini, and produces a unified figure that visualizes performance ranges across variations.
 
@@ -9,11 +12,11 @@ Evaluate LLM safety under prompt variation. This repository generates controlled
 - Produces a figure showing, per model, the performance range across semantically identical prompts that differ only in instruction phrasing and prompt formatting
 
 ### Key idea (PromptSuite)
-Variations are created with PromptSuite, along two axes:
-- Instruction paraphrase: semantically equivalent changes in phrasing/style (following Mizrahi et al., 2024)
-- Prompt formatting (surface noise): spaces, typos, casing, punctuation (following Sclar et al., 2023)
+Variations are created with [PromptSuite](https://github.com/eliyahabba/PromptSuite), along two axes:
+- Instruction paraphrase: semantically equivalent changes in phrasing/style 
+- Prompt formatting (surface noise): spaces, typos, casing, punctuation  
 
-PromptSuite repo: `https://github.com/eliyahabba/PromptSuite` (add citation in your paper as needed)
+PromptSuite is described in [Habba et al. (2025)](https://arxiv.org/abs/2507.14913). If you use this method, please consider citing the paper.
 
 ### Reproducible experiment setup (numbers)
 - 16 categories × 10 base prompts = 160 base scenarios
