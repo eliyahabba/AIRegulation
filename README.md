@@ -12,11 +12,9 @@ Evaluate LLM safety under prompt variation. This repository generates controlled
 - Produces a figure showing, per model, the performance range across semantically identical prompts that differ only in instruction phrasing and prompt formatting
 
 ### Key idea (PromptSuite)
-Variations are created with [PromptSuite](https://github.com/eliyahabba/PromptSuite), along two axes:
+Variations are created with [PromptSuite](https://github.com/eliyahabba/PromptSuite), as described in [Habba et al. (2025)](https://arxiv.org/abs/2507.14913).
 - Instruction paraphrase: semantically equivalent changes in phrasing/style 
 - Prompt formatting (surface noise): spaces, typos, casing, punctuation  
-
-PromptSuite is described in [Habba et al. (2025)](https://arxiv.org/abs/2507.14913). If you use this method, please consider citing the paper.
 
 ### Reproducible experiment setup (numbers)
 - 16 categories × 10 base prompts = 160 base scenarios
