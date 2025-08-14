@@ -20,10 +20,14 @@ plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.serif'] = ['Times New Roman']
 plt.rcParams['mathtext.fontset'] = 'dejavuserif'
 
+# ====== CONFIGURATION ======
+DATASETS_TO_RUN = ['airbench']  # Available: 'airbench', 'bbq' - modify this list to choose which datasets to analyze
+SHOW_INFO_TABLE = False  # Set to True to show model statistics table
+
 # ====== VISUALIZATION PARAMETERS ======
 BOX_WIDTH = 0.6
 BOX_SPACING = 0.8
-FIGURE_WIDTH_PER_MODEL = 2.0
+FIGURE_WIDTH_PER_MODEL = 1.5
 MIN_FIGURE_WIDTH = 14
 FIGURE_HEIGHT = 10
 
@@ -33,23 +37,40 @@ MEDIAN_LINE_WIDTH = 2.0
 
 # Font sizes
 TITLE_FONT_SIZE = 18
-AXIS_LABEL_FONT_SIZE = 16
-TICK_LABEL_FONT_SIZE = 14
-Y_TICK_LABEL_FONT_SIZE = 12
+AXIS_LABEL_FONT_SIZE = 20
+TICK_LABEL_FONT_SIZE = 18
+Y_TICK_LABEL_FONT_SIZE = 16
 INFO_TEXT_FONT_SIZE = 11
 
-# Models to analyze
-MODELS = ['llama_3_3_70b', 'llama3_8b', 'llama_3_8b_8bit',
-          'mistral_8b', ]
+# Models to analyze (ordered by size from smallest to largest)
+MODELS = [
+    'qwen_7b',              # Qwen2-7B (7B)
+    'deepseek_7b',          # DeepSeek-V2-Lite (7B) 
+    'command_r7b',          # Command-R-08-2024 (7B)
+    'llama3_8b',            # Llama 3-8B (8B)
+    'mistral_8b',           # Ministral-8B (8B)
+    'qwen3_8b',             # Qwen3-8B (8B)
+    'aya_expanse_8b',       # Aya-Expanse-8B (8B)
+    'olmo_2_13b',           # OLMo-2-13B (13B)
+    'phi_4_mini',           # Phi-4-mini (14B)
+    'mixtral_8x7b',         # Mixtral-8x7B (46.7B MoE)
+    'llama_3_3_70b'         # Llama 3.3-70B (70B)
+]
 
-# Model display names mapping
+# Model display names mapping (ordered by size, split into two lines)
 MODEL_DISPLAY_NAMES = {
-    'llama_3_3_70b': 'Llama-3.3-70B',
-    'llama3_8b': 'Llama-3-8B',
-    'llama_3_8b_8bit': 'Llama-3-8B (8-bit)',
-    'mistral_8b': 'Mistral-8B'
+    'qwen_7b': 'Qwen2\n7B',
+    'deepseek_7b': 'DeepSeek\nV2-Lite',
+    'command_r7b': 'Command-R\n08-2024',
+    'llama3_8b': 'Llama 3\n8B',
+    'mistral_8b': 'Ministral\n8B',
+    'qwen3_8b': 'Qwen3\n8B',
+    'aya_expanse_8b': 'Aya-Expanse\n8B',
+    'olmo_2_13b': 'OLMo-2\n13B',
+    'phi_4_mini': 'Phi-4\nmini',
+    'mixtral_8x7b': 'Mixtral\n8x7B',
+    'llama_3_3_70b': 'Llama 3.3\n70B'
 }
-
 # Dataset display names
 DATASET_DISPLAY_NAMES = {
     'airbench': 'AIR-Bench',
@@ -184,7 +205,7 @@ def clean_airbench_scores(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def analyze_model_variations(model_name: str) -> Dict[str, pd.DataFrame]:
+def analyze_model_variations(model_name: str) -> Dict[str, any]:
     """
     Analyze variations for a specific model across both datasets.
     
@@ -192,15 +213,19 @@ def analyze_model_variations(model_name: str) -> Dict[str, pd.DataFrame]:
         model_name: Name of the model to analyze
         
     Returns:
-        Dictionary with variation analysis for each dataset
+        Dictionary with variation analysis and variance info for each dataset
     """
     print(f"\n🔄 Analyzing variations for model: {model_name}")
     print("-" * 50)
     
     results = {}
     
-    # Load and analyze AIR-Bench data
-    airbench_df = load_airbench_results(model_name)
+    # Load and analyze AIR-Bench data (only if enabled)
+    if 'airbench' in DATASETS_TO_RUN:
+        airbench_df = load_airbench_results(model_name)
+    else:
+        airbench_df = None
+    
     if airbench_df is not None:
         airbench_df = clean_airbench_scores(airbench_df)
         
@@ -225,11 +250,24 @@ def analyze_model_variations(model_name: str) -> Dict[str, pd.DataFrame]:
             'category_first': 'category'
         })
         
-        results['airbench'] = variation_stats
+        # Calculate and print variance (range) for AIR-Bench
+        min_score = variation_stats['mean_score'].min()
+        max_score = variation_stats['mean_score'].max()
+        score_range = max_score - min_score
+        print(f"📊 AIR-Bench variance: Min={min_score:.1f}%, Max={max_score:.1f}%, Range={score_range:.1f}%")
+        
+        results['airbench'] = {
+            'data': variation_stats,
+            'variance': {'min': min_score, 'max': max_score, 'range': score_range}
+        }
         print(f"✅ AIR-Bench: {len(variation_stats)} variations, {variation_stats['count'].sum()} total responses")
     
-    # Load and analyze BBQ data
-    bbq_df = load_bbq_results(model_name)
+    # Load and analyze BBQ data (only if enabled)
+    if 'bbq' in DATASETS_TO_RUN:
+        bbq_df = load_bbq_results(model_name)
+    else:
+        bbq_df = None
+    
     if bbq_df is not None:
         # Group by variation index and calculate statistics
         agg_dict = {
@@ -256,7 +294,16 @@ def analyze_model_variations(model_name: str) -> Dict[str, pd.DataFrame]:
         variation_stats['mean_score'] = variation_stats['mean_score'] * 100
         variation_stats['std_score'] = variation_stats['std_score'] * 100
         
-        results['bbq'] = variation_stats
+        # Calculate and print variance (range) for BBQ
+        min_score = variation_stats['mean_score'].min()
+        max_score = variation_stats['mean_score'].max()
+        score_range = max_score - min_score
+        print(f"📊 BBQ variance: Min={min_score:.1f}%, Max={max_score:.1f}%, Range={score_range:.1f}%")
+        
+        results['bbq'] = {
+            'data': variation_stats,
+            'variance': {'min': min_score, 'max': max_score, 'range': score_range}
+        }
         print(f"✅ BBQ: {len(variation_stats)} variations, {variation_stats['count'].sum()} total responses")
     
     return results
@@ -274,8 +321,8 @@ def create_dataset_boxplots(all_model_results: Dict[str, Dict[str, pd.DataFrame]
         print("❌ No data available for plotting")
         return
     
-    # Create separate plots for each dataset
-    for dataset_name in ['airbench', 'bbq']:
+    # Create separate plots for each enabled dataset
+    for dataset_name in DATASETS_TO_RUN:
         print(f"\n📊 Creating box plot for {dataset_name.upper()}...")
         
         # Prepare data for this dataset
@@ -290,7 +337,11 @@ def create_dataset_boxplots(all_model_results: Dict[str, Dict[str, pd.DataFrame]
                 
             model_results = all_model_results[model_name]
             
-            variation_stats = model_results[dataset_name]
+            # Skip if this model doesn't have data for this dataset
+            if dataset_name not in model_results:
+                continue
+            
+            variation_stats = model_results[dataset_name]['data']
             
             # Prepare box plot data
             box_data.append(variation_stats['mean_score'].values)
@@ -299,8 +350,20 @@ def create_dataset_boxplots(all_model_results: Dict[str, Dict[str, pd.DataFrame]
             model_display = MODEL_DISPLAY_NAMES.get(model_name, model_name)
             labels.append(model_display)
             
-            # Set color based on model (not dataset)
-            model_colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7']
+            # Set color based on model order (cool to warm colors by size)
+            model_colors = [
+                '#2E86AB',  # Dark blue - Qwen2-7B (smallest)
+                '#A23B72',  # Purple - DeepSeek-V2-Lite  
+                '#F18F01',  # Orange - Command-R-08-2024
+                '#C73E1D',  # Red - Llama 3-8B
+                '#4ECDC4',  # Teal - Ministral-8B
+                '#45B7D1',  # Light blue - Qwen3-8B
+                '#96CEB4',  # Light green - Aya-Expanse-8B
+                '#FFEAA7',  # Yellow - OLMo-2-13B
+                '#FF9AA2',  # Pink - Phi-4-mini
+                '#B0E57C',  # Lime green - Mixtral-8x7B
+                '#FF6B6B'   # Bright red - Llama 3.3-70B (largest)
+            ]
             colors.append(model_colors[len(box_data) - 1])
             
             # Prepare info line
@@ -314,7 +377,7 @@ def create_dataset_boxplots(all_model_results: Dict[str, Dict[str, pd.DataFrame]
             continue
         
         # Create the plot
-        figure_width = max(10, len(box_data) * 2.5)
+        figure_width = max(10, len(box_data) * FIGURE_WIDTH_PER_MODEL)
         fig, ax = plt.subplots(1, 1, figsize=(figure_width, FIGURE_HEIGHT))
         
         # Create box plot
@@ -334,9 +397,7 @@ def create_dataset_boxplots(all_model_results: Dict[str, Dict[str, pd.DataFrame]
         # Customize plot
         dataset_display = DATASET_DISPLAY_NAMES.get(dataset_name, dataset_name)
         ax.set_ylabel('Performance Score (%)', fontsize=AXIS_LABEL_FONT_SIZE)
-        ax.set_xlabel('Model', fontsize=AXIS_LABEL_FONT_SIZE)
-        ax.set_title(f'{dataset_display} Performance Variation Analysis\nModel Comparison', 
-                     fontsize=TITLE_FONT_SIZE, fontweight='bold')
+        # ax.set_xlabel('Model', fontsize=AXIS_LABEL_FONT_SIZE)
         
         # Add horizontal grid lines
         ax.grid(True, axis='y', alpha=0.3, linestyle='-', linewidth=0.5)
@@ -345,7 +406,7 @@ def create_dataset_boxplots(all_model_results: Dict[str, Dict[str, pd.DataFrame]
         if dataset_name == 'bbq':
             ax.set_ylim(20, 60)
         elif dataset_name == 'airbench':
-            ax.set_ylim(10, 70)
+            ax.set_ylim(20, 85)
         else:
             ax.set_ylim(0, 105)
         
@@ -353,8 +414,8 @@ def create_dataset_boxplots(all_model_results: Dict[str, Dict[str, pd.DataFrame]
         plt.xticks(positions, labels, rotation=0, fontsize=TICK_LABEL_FONT_SIZE)
         plt.yticks(fontsize=Y_TICK_LABEL_FONT_SIZE)
         
-        # Add info text
-        if info_lines:
+        # Add info text (only if enabled)
+        if SHOW_INFO_TABLE and info_lines:
             info_text = '\n'.join(info_lines)
             fig.text(0.02, 0.02, info_text, fontsize=INFO_TEXT_FONT_SIZE, 
                     verticalalignment='bottom', bbox=dict(boxstyle='round,pad=0.5', 
@@ -362,7 +423,7 @@ def create_dataset_boxplots(all_model_results: Dict[str, Dict[str, pd.DataFrame]
         
         # Adjust layout
         plt.tight_layout()
-        if info_lines:
+        if SHOW_INFO_TABLE and info_lines:
             plt.subplots_adjust(bottom=0.25)
         
         # Save the plot
@@ -380,6 +441,56 @@ def create_dataset_boxplots(all_model_results: Dict[str, Dict[str, pd.DataFrame]
 
 
 
+
+
+def print_variance_summary(all_model_results: Dict[str, Dict[str, any]]):
+    """
+    Print a summary table of variance ranges for all models.
+    
+    Args:
+        all_model_results: Dictionary with results for all models
+    """
+    print("\n" + "=" * 80)
+    print("📊 VARIANCE SUMMARY - All Models")
+    print("=" * 80)
+    
+    # Print header
+    print(f"{'Model':<20} {'AIR-Bench Range':<18} {'BBQ Range':<15} {'AIR-Bench Min-Max':<20} {'BBQ Min-Max':<20}")
+    print("-" * 80)
+    
+    # Print each model's variance info
+    for model_name in MODELS:
+        if model_name not in all_model_results:
+            continue
+            
+        model_display = MODEL_DISPLAY_NAMES.get(model_name, model_name).replace('\n', ' ')
+        model_results = all_model_results[model_name]
+        
+        # AIR-Bench variance
+        airbench_info = ""
+        airbench_minmax = ""
+        if 'airbench' in model_results:
+            var = model_results['airbench']['variance']
+            airbench_info = f"{var['range']:.1f}%"
+            airbench_minmax = f"{var['min']:.1f}%-{var['max']:.1f}%"
+        else:
+            airbench_info = "N/A"
+            airbench_minmax = "N/A"
+        
+        # BBQ variance
+        bbq_info = ""
+        bbq_minmax = ""
+        if 'bbq' in model_results:
+            var = model_results['bbq']['variance']
+            bbq_info = f"{var['range']:.1f}%"
+            bbq_minmax = f"{var['min']:.1f}%-{var['max']:.1f}%"
+        else:
+            bbq_info = "N/A"
+            bbq_minmax = "N/A"
+        
+        print(f"{model_display:<20} {airbench_info:<18} {bbq_info:<15} {airbench_minmax:<20} {bbq_minmax:<20}")
+    
+    print("=" * 80)
 
 
 def main():
@@ -409,6 +520,9 @@ def main():
     
     # Create separate box plots for each dataset
     create_dataset_boxplots(all_model_results, output_dir)
+    
+    # Print variance summary for all models
+    print_variance_summary(all_model_results)
     
     print(f"\n✅ Unified variation analysis complete!")
     print(f"📁 Results saved to: {output_dir}")
