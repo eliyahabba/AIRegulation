@@ -1,7 +1,7 @@
 ### Beyond Benchmarks: On The False Promise of AI Regulation
 
 ## Overview
-[![Paper](https://img.shields.io/badge/arxiv-paper-red)](https://arxiv.org/abs/2501.15693) [![Contact](https://img.shields.io/badge/📧-contact-green)](mailto:eliyahaba@mail.huji.ac.il)
+[![Paper](https://img.shields.io/badge/arxiv-paper-red)](https://arxiv.org/abs/2501.15693) [![Dataset](https://img.shields.io/badge/🤗-dataset-yellow)](https://huggingface.co/datasets/nlphuji/AI_Regulation) [![Contact](https://img.shields.io/badge/📧-contact-green)](mailto:eliyahaba@mail.huji.ac.il)
 
 Evaluate LLM safety under prompt variation. This repository generates controlled prompt variations (using PromptSuite), runs multiple models, judges safety with GPT‑4o‑mini, and produces a unified figure that visualizes performance ranges across variations.
 
